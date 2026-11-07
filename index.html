@@ -1,0 +1,2832 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>Seagate Hard Drive – Inside the Engineering | Exos Enterprise 3D Architecture</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono for technical telemetry -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <!-- Three.js r128 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            seagate: {
+              green: '#6ebe49',
+              neon: '#00ff66',
+              dark: '#050608',
+              graphite: '#0d1015',
+              steel: '#8c96a5',
+              champagne: '#d8cfc2'
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    :root {
+      --seagate-green: #6ebe49;
+      --seagate-neon: #00ff66;
+      --bg-deep: #050608;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #050608;
+      color: #f3f5f8;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      selection-background-color: #6ebe49;
+      selection-color: #050608;
+    }
+
+    ::selection {
+      background: rgba(110, 190, 73, 0.35);
+      color: #ffffff;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #050608;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e2631;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #6ebe49;
+    }
+
+    /* Fixed 3D Viewport Canvas */
+    #webgl-container {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: auto;
+      background: radial-gradient(circle at 50% 45%, #101620 0%, #07090d 52%, #040507 100%);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      outline: none;
+    }
+
+    /* Subtle Studio Vignette & Scanline Grid Overlay */
+    .studio-atmosphere {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 50%, transparent 55%, rgba(3, 4, 6, 0.78) 100%),
+        linear-gradient(180deg, rgba(5, 6, 8, 0.65) 0%, transparent 14%, transparent 86%, rgba(5, 6, 8, 0.8) 100%);
+    }
+
+    .tech-grid-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.08;
+      background-size: 48px 48px;
+      background-image: 
+        linear-gradient(to right, rgba(140, 150, 165, 0.2) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(140, 150, 165, 0.2) 1px, transparent 1px);
+      mask-image: radial-gradient(circle at 50% 50%, black 20%, transparent 80%);
+      -webkit-mask-image: radial-gradient(circle at 50% 50%, black 20%, transparent 80%);
+    }
+
+    /* Shallow Depth of Field Subtle Edge Bokeh Filter */
+    .dof-vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      backdrop-filter: blur(1.5px);
+      -webkit-backdrop-filter: blur(1.5px);
+      mask-image: radial-gradient(circle at 50% 50%, transparent 66%, black 98%);
+      -webkit-mask-image: radial-gradient(circle at 50% 50%, transparent 66%, black 98%);
+      transition: opacity 0.5s ease;
+    }
+
+    /* Scroll Content Container */
+    #scroll-content {
+      position: relative;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .interactive-el {
+      pointer-events: auto;
+    }
+
+    /* Glassmorphic Luxury Tech Panels */
+    .tech-panel {
+      background: linear-gradient(145deg, rgba(13, 17, 23, 0.84) 0%, rgba(7, 9, 13, 0.92) 100%);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      box-shadow: 
+        0 25px 60px -15px rgba(0, 0, 0, 0.85),
+        0 0 1px 1px rgba(110, 190, 73, 0.08),
+        inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+    }
+
+    .tech-panel-active {
+      border-color: rgba(110, 190, 73, 0.45);
+      box-shadow: 
+        0 25px 60px -15px rgba(0, 0, 0, 0.9),
+        0 0 30px -8px rgba(110, 190, 73, 0.22),
+        inset 0 1px 0 0 rgba(110, 190, 73, 0.25);
+    }
+
+    /* Compact Mobile Telemetry Drawer (< 768px) */
+    @media (max-width: 767px) {
+      .mobile-telemetry-card {
+        background: rgba(8, 10, 14, 0.78) !important;
+        backdrop-filter: blur(12px) saturate(160%) !important;
+        -webkit-backdrop-filter: blur(12px) saturate(160%) !important;
+        max-height: 40vh;
+        display: flex;
+        flex-direction: column;
+        transition: max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1), padding 0.25s ease;
+      }
+      .mobile-telemetry-card.is-collapsed {
+        max-height: 58px !important;
+        overflow: hidden !important;
+        padding-top: 0.6rem !important;
+        padding-bottom: 0.6rem !important;
+      }
+      .mobile-telemetry-card.is-collapsed .telemetry-collapsible-body {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .mobile-telemetry-scroll {
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        padding-right: 2px;
+      }
+    }
+
+    /* Custom Range Slider */
+    input[type="range"].seagate-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.12);
+      height: 4px;
+      border-radius: 2px;
+    }
+    input[type="range"].seagate-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #00ff66;
+      cursor: pointer;
+      box-shadow: 0 0 10px #00ff66;
+      border: 2px solid #050608;
+      transition: transform 0.15s ease;
+    }
+    input[type="range"].seagate-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+
+    /* Progress Rail Node Transitions */
+    .rail-dot {
+      transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .rail-item:hover .rail-label {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    /* Callout Pin Animation */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.85); opacity: 0.9; }
+      70% { transform: scale(1.85); opacity: 0; }
+      100% { transform: scale(1.85); opacity: 0; }
+    }
+    .callout-pulse::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 9999px;
+      border: 1.5px solid #00ff66;
+      animation: pulse-ring 2s infinite;
+    }
+
+    /* Subtle Green Glow Text */
+    .text-glow-green {
+      text-shadow: 0 0 24px rgba(0, 255, 102, 0.45);
+    }
+    .text-glow-silver {
+      text-shadow: 0 0 35px rgba(255, 255, 255, 0.22);
+    }
+
+    /* Free Inspect Cursor */
+    .orbit-cursor {
+      cursor: grab;
+    }
+    .orbit-cursor:active {
+      cursor: grabbing;
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-seagate-green/30 selection:text-white">
+
+  <!-- 1. FIXED 3D WEBGL STUDIO CANVAS -->
+  <div id="webgl-container" class="orbit-cursor" title="Drag to slightly orbit view, or enable Free 3D Inspect mode"></div>
+
+  <!-- Studio Atmospheric Overlays -->
+  <div class="studio-atmosphere"></div>
+  <div class="tech-grid-overlay"></div>
+  <div id="dof-layer" class="dof-vignette"></div>
+
+  <!-- 2. DYNAMIC 3D COMPONENT TARGET CALLOUT PIN (SVG + HUD Reticle) -->
+  <div id="callout-overlay" class="fixed inset-0 pointer-events-none z-20 opacity-0 transition-opacity duration-500">
+    <svg class="w-full h-full overflow-visible">
+      <defs>
+        <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#00ff66" stop-opacity="0.95" />
+          <stop offset="100%" stop-color="#6ebe49" stop-opacity="0.15" />
+        </linearGradient>
+      </defs>
+      <polyline id="callout-line" fill="none" stroke="url(#lineGrad)" stroke-width="1.5" stroke-dasharray="3 3" points="0,0 0,0 0,0" />
+    </svg>
+    <!-- 3D Anchor Reticle -->
+    <div id="callout-anchor" class="absolute -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full border border-seagate-neon/80 bg-seagate-neon/20 flex items-center justify-center callout-pulse">
+      <div class="w-1.5 h-1.5 rounded-full bg-seagate-neon shadow-[0_0_8px_#00ff66]"></div>
+    </div>
+    <!-- Floating Micro Tag near 3D part -->
+    <div id="callout-tag" class="absolute -translate-y-1/2 px-2.5 py-1 rounded bg-black/80 border border-seagate-green/50 backdrop-blur-md text-[10px] font-mono uppercase tracking-widest text-seagate-neon whitespace-nowrap shadow-lg">
+      <span id="callout-tag-id">LAYER 01</span> • <span id="callout-tag-name" class="text-white">TOP COVER</span>
+    </div>
+  </div>
+
+  <!-- 3. TOP NAVIGATION & LIVE TELEMETRY BAR -->
+  <header class="fixed top-0 left-0 right-0 z-40 px-4 sm:px-8 py-3.5 flex items-center justify-between pointer-events-none">
+    <!-- Brand Identity -->
+    <div class="flex items-center gap-3.5 interactive-el">
+      <a href="#section-hero" onclick="scrollToSection(0); return false;" class="group flex items-center gap-3 focus:outline-none">
+        <!-- Custom Seagate-Inspired S-Wave Dynamic SVG Emblem -->
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-seagate-green/25 to-black border border-seagate-green/50 flex items-center justify-center shadow-[0_0_20px_rgba(110,190,73,0.25)] group-hover:border-seagate-neon transition-colors">
+          <svg class="w-5 h-5 text-seagate-neon" viewBox="0 0 32 32" fill="none">
+            <path d="M16 4C9.373 4 4 9.373 4 16c0 3.314 1.343 6.314 3.515 8.485" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M16 28c6.627 0 12-5.373 12-12 0-3.314-1.343-6.314-3.515-8.485" stroke="#6ebe49" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M16 8.5c-4.142 0-7.5 3.358-7.5 7.5 0 2.071.84 3.946 2.197 5.303" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+            <path d="M16 23.5c4.142 0 7.5-3.358 7.5-7.5 0-2.071-.84-3.946-2.197-5.303" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="2.2" fill="#00ff66"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold tracking-[0.2em] text-xs sm:text-sm text-white">SEAGATE</span>
+            <span class="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-seagate-green/20 text-seagate-neon border border-seagate-green/40">EXOS™ MOZAIC 3+™</span>
+          </div>
+          <p class="text-[10px] font-mono text-slate-400 tracking-widest uppercase hidden sm:block">ฮาร์ดไดรฟ์ Exos Enterprise • ความจุ: 600 GB – 32 TB</p>
+        </div>
+      </a>
+    </div>
+
+    <!-- Center Live Drive Telemetry Pill (Desktop) -->
+    <div class="hidden xl:flex items-center gap-6 px-5 py-2 rounded-full tech-panel text-[11px] font-mono tracking-wider interactive-el">
+      <div class="flex items-center gap-2">
+        <span id="status-led" class="w-2 h-2 rounded-full bg-seagate-neon shadow-[0_0_8px_#00ff66] animate-pulse"></span>
+        <span class="text-slate-400">SPINDLE:</span>
+        <span id="hud-rpm-readout" class="text-white font-semibold">7,200 RPM</span>
+      </div>
+      <div class="h-3 w-[1px] bg-white/10"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-slate-400">ACTUATOR:</span>
+        <span id="hud-seek-readout" class="text-seagate-neon">4.16ms ACTIVE SEEK</span>
+      </div>
+      <div class="h-3 w-[1px] bg-white/10"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-slate-400">CHAMBER:</span>
+        <span class="text-amber-200/90">HELIUM SEALED (99.9%)</span>
+      </div>
+      <div class="h-3 w-[1px] bg-white/10"></div>
+      <div class="flex items-center gap-2">
+        <span class="text-slate-400">EXPLOSION:</span>
+        <span id="hud-explode-pct" class="text-white w-9 text-right">0%</span>
+      </div>
+    </div>
+
+    <!-- Right Quick Engineering Controls -->
+    <div class="flex items-center gap-2 sm:gap-2.5 interactive-el">
+      <!-- Free Orbit Camera Mode Toggle -->
+      <button id="btn-free-orbit" onclick="toggleFreeOrbitMode()" class="px-3 py-2 rounded-lg tech-panel hover:border-seagate-green/60 text-xs font-mono tracking-wider flex items-center gap-2 transition-all" title="Toggle Free 360° Mouse/Touch Orbit & Zoom">
+        <svg class="w-3.5 h-3.5 text-seagate-neon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+        </svg>
+        <span id="free-orbit-label" class="hidden md:inline">360° INSPECT: OFF</span>
+      </button>
+
+      <!-- RPM Speed Mode Cycle -->
+      <button id="btn-rpm-mode" onclick="cycleRpmMode()" class="px-3 py-2 rounded-lg tech-panel hover:border-seagate-green/60 text-xs font-mono tracking-wider flex items-center gap-1.5 transition-all" title="Switch Spindle RPM & Stroboscopic Track Visualization">
+        <svg class="w-3.5 h-3.5 text-seagate-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        <span id="rpm-btn-label" class="hidden sm:inline">7.2K RPM</span>
+      </button>
+
+      <!-- Engineering Drawer / Manual Override Toggle -->
+      <button id="btn-lab-drawer" onclick="toggleLabDrawer()" class="p-2 rounded-lg tech-panel hover:border-seagate-green/60 text-slate-300 hover:text-white transition-all" title="Open Engineering Telemetry & Accessibility Controls">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- 4. COLLAPSIBLE ENGINEERING OVERRIDE & ACCESSIBILITY DRAWER -->
+  <div id="lab-drawer" class="fixed top-16 right-4 sm:right-8 z-40 w-80 rounded-2xl tech-panel p-5 hidden interactive-el transition-all duration-300">
+    <div class="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-seagate-neon"></span>
+        <h3 class="text-xs font-mono uppercase tracking-widest text-white font-semibold">Engineering Lab Controls</h3>
+      </div>
+      <button onclick="toggleLabDrawer()" class="text-slate-400 hover:text-white text-xs font-mono">✕</button>
+    </div>
+
+    <!-- Manual Exploded View Override Slider -->
+    <div class="mb-4">
+      <div class="flex justify-between text-[11px] font-mono mb-1.5">
+        <span class="text-slate-400">AXIS DISASSEMBLY OVERRIDE</span>
+        <span id="drawer-explode-val" class="text-seagate-neon">SCROLL SYNC</span>
+      </div>
+      <input id="manual-explode-slider" type="range" min="0" max="100" value="0" class="w-full seagate-slider" oninput="onManualExplodeInput(this.value)" />
+      <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
+        <span>ASSEMBLED (0%)</span>
+        <button onclick="resetExplodeToScroll()" class="text-seagate-green hover:underline">Sync to Scroll</button>
+        <span>EXPLODED (100%)</span>
+      </div>
+    </div>
+
+    <!-- Platter Stroboscopic Track Overlay Toggle -->
+    <div class="flex items-center justify-between py-2.5 border-t border-white/10">
+      <div>
+        <div class="text-xs font-medium text-white">Stroboscopic Servo Tracks</div>
+        <div class="text-[10px] text-slate-400 font-mono">Highlight magnetic sector wedges</div>
+      </div>
+      <button id="toggle-strobe-btn" onclick="toggleStrobeTracks()" class="px-2.5 py-1 rounded text-[10px] font-mono uppercase border border-seagate-green/50 bg-seagate-green/20 text-seagate-neon">
+        ACTIVE
+      </button>
+    </div>
+
+    <!-- Head Parking / Ramp Load Simulation -->
+    <div class="flex items-center justify-between py-2.5 border-t border-white/10">
+      <div>
+        <div class="text-xs font-medium text-white">Actuator Ramp Park Test</div>
+        <div class="text-[10px] text-slate-400 font-mono">Park sliders on outer LCP ramp</div>
+      </div>
+      <button id="toggle-park-btn" onclick="toggleHeadPark()" class="px-2.5 py-1 rounded text-[10px] font-mono uppercase border border-white/15 bg-white/5 text-slate-300">
+        SEEKING
+      </button>
+    </div>
+
+    <!-- Reduced Motion Accessibility Toggle -->
+    <div class="flex items-center justify-between py-2.5 border-t border-white/10">
+      <div>
+        <div class="text-xs font-medium text-white">Reduced Motion Mode</div>
+        <div class="text-[10px] text-slate-400 font-mono">Gentle camera & slow rotation</div>
+      </div>
+      <button id="toggle-motion-btn" onclick="toggleReducedMotion()" class="px-2.5 py-1 rounded text-[10px] font-mono uppercase border border-white/15 bg-white/5 text-slate-300">
+        OFF
+      </button>
+    </div>
+  </div>
+
+  <!-- 5. RIGHT-HAND VERTICAL PROGRESS INDICATOR (11 COMPONENTS + HERO + FINAL) -->
+  <nav aria-label="HDD Component Layers" class="fixed right-3 sm:right-6 top-1/2 -translate-y-1/2 z-30 hidden sm:flex flex-col items-end gap-1.5 interactive-el">
+    <div id="progress-rail-items" class="flex flex-col items-end gap-1.5 py-3 px-2 rounded-2xl bg-black/40 backdrop-blur-md border border-white/5">
+      <!-- Dynamically populated by JS -->
+    </div>
+  </nav>
+
+  <!-- Mobile Bottom Progress Strip -->
+  <div class="fixed bottom-0 left-0 right-0 z-30 sm:hidden bg-black/85 backdrop-blur-lg border-t border-white/10 px-4 py-2 flex items-center justify-between interactive-el">
+    <button onclick="stepSection(-1)" class="px-2.5 py-1 rounded bg-white/5 border border-white/10 text-xs font-mono text-slate-300 active:bg-seagate-green/20">◀ PREV</button>
+    <div class="text-center">
+      <div id="mobile-step-num" class="text-[10px] font-mono text-seagate-neon tracking-widest">HERO • 00 / 12</div>
+      <div id="mobile-step-title" class="text-xs font-medium text-white truncate max-w-[180px]">Seagate Exos Enterprise</div>
+    </div>
+    <button onclick="stepSection(1)" class="px-2.5 py-1 rounded bg-white/5 border border-white/10 text-xs font-mono text-slate-300 active:bg-seagate-green/20">NEXT ▶</button>
+  </div>
+
+  <!-- Free Orbit Mode Active Banner -->
+  <div id="free-orbit-banner" class="fixed bottom-14 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 hidden items-center gap-4 px-5 py-2.5 rounded-full tech-panel tech-panel-active text-xs font-mono interactive-el">
+    <span class="w-2 h-2 rounded-full bg-seagate-neon animate-ping"></span>
+    <span class="text-white">FREE 3D STUDIO ORBIT: <span class="text-slate-300">Drag to rotate • Scroll/Pinch to zoom</span></span>
+    <button onclick="toggleFreeOrbitMode()" class="px-2.5 py-1 rounded bg-seagate-green text-black font-semibold hover:bg-seagate-neon transition-colors">
+      RESUME SCROLL TOUR
+    </button>
+  </div>
+
+  <!-- 6. SCROLL-DRIVEN STORYTELLING SECTIONS -->
+  <main id="scroll-content">
+
+    <!-- ==================== SECTION 0: HERO SECTION ==================== -->
+    <section id="section-0" data-index="0" class="min-h-screen w-full flex flex-col justify-between px-6 sm:px-12 lg:px-20 pt-24 pb-16 relative">
+      <!-- Top Intro Tag -->
+      <div class="max-w-xl mt-2 sm:mt-6">
+        <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-seagate-green/10 border border-seagate-green/35 mb-5 backdrop-blur-md">
+          <span class="w-2 h-2 rounded-full bg-seagate-neon shadow-[0_0_8px_#00ff66]"></span>
+          <span class="text-[11px] font-mono uppercase tracking-[0.16em] text-seagate-neon">ฮาร์ดไดรฟ์ EXOS ENTERPRISE • ความจุ: 600 GB – 32 TB • MOZAIC 3+™</span>
+        </div>
+        <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extralight tracking-tight text-white leading-[1.06] text-glow-silver">
+          SEAGATE <span class="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-seagate-green">EXOS™</span>
+        </h1>
+        <p class="mt-2 text-lg sm:text-2xl font-light tracking-[0.15em] uppercase text-seagate-green/90 font-mono">
+          Mozaic 3+™ • Inside the Engineering
+        </p>
+      </div>
+
+      <!-- Bottom Hero Footer & Scroll Prompt -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end mt-auto pt-12">
+        <div class="lg:col-span-5 tech-panel rounded-2xl p-5 sm:p-6 interactive-el">
+          <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 pb-3 mb-3 border-b border-white/10">
+            <span>PRODUCT: SEAGATE EXOS™ ENTERPRISE</span>
+            <span class="text-seagate-neon">MOZAIC 3+™ HAMR PLATFORM</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed font-light">
+            ฮาร์ดไดรฟ์ระดับองค์กร <span class="text-white font-medium">Seagate Exos™ Enterprise (600 GB – 32 TB)</span> ขับเคลื่อนด้วยสถาปัตยกรรม <span class="text-seagate-neon font-mono">Mozaic 3+™</span> ที่ผสานแผ่นจานแม่เหล็ก Iron-Platinum Superlattice และหัวอ่านเขียนเลเซอร์นาโนโฟโตนิกส์ หมุนด้วยความเร็ว 7,200 RPM ภายในห้องปิดผนึกฮีเลียม เลื่อนหน้าจอเพื่อแยกชิ้นส่วนวิศวกรรมทั้ง <span class="text-seagate-neon font-mono">11 ชั้น</span> ตามแกนแนวตั้ง
+          </p>
+          <div class="grid grid-cols-3 gap-3 mt-4 pt-3 border-t border-white/10 font-mono">
+            <div>
+              <div class="text-[10px] text-slate-400">ความจุ (CAPACITY)</div>
+              <div class="text-sm sm:text-base font-semibold text-white">600GB – 32TB</div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-400">PLATFORM</div>
+              <div class="text-sm sm:text-base font-semibold text-seagate-neon">Mozaic 3+™</div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-400">MTBF RATING</div>
+              <div class="text-sm sm:text-base font-semibold text-white">2.5M HRS</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center Scroll Prompt -->
+        <div class="lg:col-span-3 flex flex-col items-center justify-center pb-2 interactive-el">
+          <button onclick="scrollToSection(1)" class="group flex flex-col items-center gap-2.5 text-slate-400 hover:text-white transition-colors">
+            <span class="text-[10px] font-mono uppercase tracking-[0.25em] text-seagate-neon">Scroll to Disassemble</span>
+            <div class="w-7 h-11 rounded-full border border-white/25 group-hover:border-seagate-neon flex items-start justify-center p-1.5 transition-colors">
+              <div class="w-1.5 h-2.5 rounded-full bg-seagate-neon animate-bounce"></div>
+            </div>
+          </button>
+        </div>
+
+        <!-- Quick Layer Jump Preview -->
+        <div class="lg:col-span-4 hidden lg:flex flex-col items-end justify-end font-mono text-right">
+          <div class="text-[10px] text-slate-400 uppercase tracking-widest mb-1">Interactive 3D Telemetry</div>
+          <div class="text-xs text-slate-300">Drag anywhere on the 3D drive to inspect surface reflections</div>
+          <div class="mt-2 flex gap-2 interactive-el">
+            <button onclick="scrollToSection(1)" class="px-3.5 py-2 rounded-lg bg-seagate-green text-black font-semibold text-xs hover:bg-seagate-neon transition-all shadow-[0_0_20px_rgba(110,190,73,0.4)]">
+              START LAYER-BY-LAYER TOUR →
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SECTIONS 1 TO 11: DYNAMICALLY RENDERED COMPONENT SECTIONS ==================== -->
+    <div id="component-sections-wrapper"></div>
+
+    <!-- ==================== SECTION 12: FINAL ASSEMBLY SECTION ==================== -->
+    <section id="section-12" data-index="12" class="min-h-screen w-full flex flex-col justify-between items-center px-6 sm:px-12 lg:px-20 pt-28 pb-20 relative text-center">
+      <!-- Top Status -->
+      <div class="mt-2">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-seagate-green/15 border border-seagate-neon/50 backdrop-blur-md mb-4">
+          <span class="w-2 h-2 rounded-full bg-seagate-neon animate-ping"></span>
+          <span class="text-[11px] font-mono uppercase tracking-[0.25em] text-seagate-neon">Hermetic Mechanical Lock Verified • All 11 Layers Sealed</span>
+        </div>
+        <h2 class="text-3xl sm:text-5xl lg:text-6xl font-extralight tracking-[0.12em] uppercase text-white text-glow-green">
+          PRECISION ENGINEERED.<br class=" sm:hidden" />
+          <span class="font-semibold text-seagate-neon">DATA PROTECTED.</span>
+        </h2>
+        <p class="mt-3 max-w-2xl mx-auto text-xs sm:text-sm text-slate-300 font-light tracking-wide">
+          Every Seagate Exos enterprise hard drive undergoes over 1,600 automated cleanroom assembly and servo-calibration steps—protecting the world’s hyperscale cloud and enterprise data infrastructure.
+        </p>
+      </div>
+
+      <!-- Bottom Summary Telemetry & Action Bar -->
+      <div class="w-full max-w-4xl tech-panel tech-panel-active rounded-2xl p-6 sm:p-8 interactive-el mt-auto">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pb-6 mb-6 border-b border-white/10 text-left font-mono">
+          <div>
+            <div class="text-[10px] text-slate-400">ENCLOSURE INTEGRITY</div>
+            <div class="text-sm sm:text-base text-seagate-neon font-semibold mt-0.5">CLASS-100 SEALED</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-400">TORX T8 FASTENERS</div>
+            <div class="text-sm sm:text-base text-white font-semibold mt-0.5">8× LOCKED (0.65 Nm)</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-400">INTERFACE PROTOCOL</div>
+            <div class="text-sm sm:text-base text-white font-semibold mt-0.5">12Gb/s SAS / SATA</div>
+          </div>
+          <div>
+            <div class="text-[10px] text-slate-400">ACTIVE WARRANTY</div>
+            <div class="text-sm sm:text-base text-seagate-green font-semibold mt-0.5">5-YEAR ENTERPRISE</div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <button onclick="triggerLockdownReplay()" class="px-4 py-2.5 rounded-xl bg-seagate-green text-black font-mono text-xs font-semibold tracking-wider hover:bg-seagate-neon transition-all shadow-[0_0_25px_rgba(0,255,102,0.35)]">
+              ⟳ REPLAY MECHANICAL SEALING
+            </button>
+            <button onclick="toggleFreeOrbitMode()" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-mono text-xs tracking-wider transition-all">
+              360° FREE STUDIO INSPECT
+            </button>
+          </div>
+          <button onclick="scrollToSection(0)" class="px-4 py-2.5 rounded-xl border border-seagate-green/40 text-seagate-neon hover:bg-seagate-green/10 font-mono text-xs tracking-wider transition-all">
+            ↑ RETURN TO TOP
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- 7. APPLICATION ARCHITECTURE, 11-LAYER DATA & THREE.JS ENGINE           -->
+  <!-- ===================================================================== -->
+  <script>
+    /**
+     * ============================================================================
+     * PART 1: AUTHENTIC 11-LAYER SEAGATE ENTERPRISE HDD ENGINEERING DATA
+     * ============================================================================
+     * Each component includes its exact engineering function, technical specification,
+     * real-world manufacturing purpose, exploded Y coordinate, 3D callout target,
+     * and macro camera choreography for desktop and mobile viewports.
+     */
+    const HDD_COMPONENTS = [
+      {
+        id: 1,
+        code: "01",
+        name: "Top Cover",
+        subtitle: "Brushed Silver Frame & Exos™ Mozaic™ Hermetic Enclosure",
+        engineeringFunction: "Forms the upper structural barrier and constrained-layer acoustic damper of the Exos Enterprise Head Disk Assembly (HDA), featuring the signature brushed-silver perimeter bezel, jet-black Exos starfighter faceplate, and green Mozaic™ identity.",
+        technicalSpec: "1.2 mm multi-layer precision-stamped stainless steel with CNC-chamfered brushed silver outer rim, viscoelastic acoustic core, and 8 flush perimeter/shaft fasteners torqued to 0.65 Nm.",
+        manufacturingPurpose: "Installed inside an ISO Class-100 (ISO 5) cleanroom using robotic multi-spindle torque drivers to seal the internal helium environment and suppress harmonic vibration in high-density hyperscale server racks.",
+        metrics: [
+          { label: "DESIGN IDENTITY", value: "Exos™ Starfighter + Mozaic™" },
+          { label: "FRAME FINISH", value: "Brushed Silver Bezel + Matte Black" },
+          { label: "ACOUSTIC DAMPING", value: "-6.4 dBA Constrained Layer" }
+        ],
+        actionLabel: "Pulse Fastener Torque Check",
+        explodedY: 13.5,
+        anchorLocal: new THREE.Vector3(0.0, 0.25, 0.5),
+        camPos: new THREE.Vector3(-8.5, 19.5, 11.5),
+        camTarget: new THREE.Vector3(-2.4, 13.3, 0.2),
+        side: "left"
+      },
+      {
+        id: 2,
+        code: "02",
+        name: "Sealing Gasket",
+        subtitle: "Helium-Sealed Laser-Welded Perimeter Containment Gasket",
+        engineeringFunction: "Maintains an ultra-pure internal chamber free of sub-micron airborne contaminants, humidity gradients, and corrosive gases while retaining low-density helium gas inside high-capacity Exos drives.",
+        technicalSpec: "Fluoroelastomer (FKM) / low-outgassing EPDM continuous perimeter profile molded to ±15 µm compression tolerance, paired with laser-welded hermetic sealing interfaces.",
+        manufacturingPurpose: "Prevents microscopic dust particles—which are boulders compared to the 1.5 nm head flying height—from entering the HDA and reduces aerodynamic drag by 38% across a 2.5-million-hour MTBF lifecycle.",
+        metrics: [
+          { label: "INTERNAL ATMOSPHERE", value: "99.9% Pure Helium (1/7 Air Density)" },
+          { label: "CLEANROOM RATING", value: "ISO Class 100 (<0.1 µm)" },
+          { label: "DRAG REDUCTION", value: "38% Lower Platter Turbulence" }
+        ],
+        actionLabel: "Highlight Perimeter Compression",
+        explodedY: 10.7,
+        anchorLocal: new THREE.Vector3(4.65, 0.0, 1.5),
+        camPos: new THREE.Vector3(9.5, 15.2, 11.8),
+        camTarget: new THREE.Vector3(2.2, 10.6, 0.3),
+        side: "right"
+      },
+      {
+        id: 3,
+        code: "03",
+        name: "Magnetic Platters",
+        subtitle: "10-Platter Iron-Platinum (FePt) Superlattice Media (Up to 32 TB)",
+        engineeringFunction: "Stores up to 32 TB of enterprise digital data (3.2 TB+ per platter) as nanoscale magnetic bits arranged in hundreds of thousands of concentric tracks across both top and bottom recording surfaces.",
+        technicalSpec: "95 mm precision glass-ceramic substrates sputter-coated with Mozaic 3+™ Iron-Platinum (FePt) superlattice magnetic media, a 2 nm Diamond-Like Carbon (DLC) overcoat, and molecular PFPE lubricant.",
+        manufacturingPurpose: "Engineered with higher magnetic coercivity to prevent thermal bit instability at extreme areal densities, polished to sub-angstrom roughness (< 0.08 nm) so sliders glide safely at Mach 0.1.",
+        metrics: [
+          { label: "CAPACITY RANGE", value: "600 GB – 32 TB (3.2 TB/Disk)" },
+          { label: "MEDIA ALLOY", value: "FePt Superlattice + 2nm DLC" },
+          { label: "SURFACE ROUGHNESS", value: "< 0.08 nm Mirror Finish" }
+        ],
+        actionLabel: "Toggle Stroboscopic Servo Tracks",
+        explodedY: 7.8,
+        anchorLocal: new THREE.Vector3(-3.2, 0.25, -1.65),
+        camPos: new THREE.Vector3(-8.2, 12.2, 6.8),
+        camTarget: new THREE.Vector3(-2.2, 7.8, -1.5),
+        side: "left"
+      },
+      {
+        id: 4,
+        code: "04",
+        name: "Spindle Motor",
+        subtitle: "7,200 RPM Triple-Stage Fluid Dynamic Bearing (FDB) Motor",
+        engineeringFunction: "Rotates the 10-platter stack at a rock-solid constant angular velocity of 7,200 RPM, ensuring nanoscale data sectors pass beneath the read/write heads with picosecond timing precision.",
+        technicalSpec: "3-phase, 12-slot copper-wound brushless DC stator paired with a balanced stainless-steel rotor hub riding on herringbone-grooved hydrodynamic oil film bearings with Non-Repeatable Runout (NRRO) below 10 nm.",
+        manufacturingPurpose: "Eliminates metal-to-metal ball bearing contact by suspending the spinning shaft on a pressurized microscopic film of synthetic ester oil, enabling silent, vibration-free 24×7 enterprise operation.",
+        metrics: [
+          { label: "ROTATIONAL VELOCITY", value: "7,200 RPM Enterprise Locked" },
+          { label: "RADIAL RUNOUT (NRRO)", value: "< 0.01 Microns (10 nm)" },
+          { label: "MOTOR TOPOLOGY", value: "3-Phase 12-Pole FDB Brushless" }
+        ],
+        actionLabel: "Cycle 7.2K / Slow-Mo / Pause",
+        explodedY: 4.9,
+        anchorLocal: new THREE.Vector3(0.0, 0.1, -1.65),
+        camPos: new THREE.Vector3(6.8, 8.2, 5.2),
+        camTarget: new THREE.Vector3(1.5, 4.9, -1.65),
+        side: "right"
+      },
+      {
+        id: 5,
+        code: "05",
+        name: "Read/Write Heads",
+        subtitle: "Plasmonic Nanophotonic Writer & Gen-7 Spintronic Reader",
+        engineeringFunction: "Uses an integrated nanophotonic laser and quantum antenna to momentarily heat FePt media to 450°C in less than 1 nanosecond while writing data, paired with a Gen-7 spintronic TMR sensor for ultra-dense reading.",
+        technicalSpec: "AlTiC femto-sliders with etched Air Bearing Surfaces (ABS), vertically integrated laser diode, plasmonic near-field transducer (NFT), and quantum-confined Tunneling Magnetoresistive (TMR) read sensors.",
+        manufacturingPurpose: "Core innovation of the Seagate Mozaic 3+™ HAMR platform—focusing photonic energy into a sub-20nm spot to record data at over 3 Terabits per square inch while flying 1.5 nm above the platter.",
+        metrics: [
+          { label: "WRITE TECHNOLOGY", value: "Mozaic 3+™ Plasmonic HAMR" },
+          { label: "READ SENSOR", value: "Gen-7 Spintronic TMR" },
+          { label: "FLYING CLEARANCE", value: "1.5 Nanometers Active FHC" }
+        ],
+        actionLabel: "Pulse NanophotonicHAMR Laser",
+        explodedY: 2.3,
+        anchorLocal: new THREE.Vector3(-0.35, 0.0, -0.65),
+        camPos: new THREE.Vector3(-5.6, 4.8, 4.2),
+        camTarget: new THREE.Vector3(-1.4, 2.3, -0.4),
+        side: "left"
+      },
+      {
+        id: 6,
+        code: "06",
+        name: "Actuator Arm",
+        subtitle: "Multi-Stage Micro-Actuated Forged Aluminum Arms",
+        engineeringFunction: "Translates electromagnetic torque from the Voice Coil Motor into rapid, zero-backlash radial arcs across the platter surfaces, positioning the 20 read/write heads over any of 600,000+ concentric tracks.",
+        technicalSpec: "Wire-EDM and CNC-machined 7075 forged aluminum alloy comb structure (E-block) with weight-relief truss pockets and resonant structural modes pushed above 4.8 kHz.",
+        manufacturingPurpose: "Engineered for minimum rotational inertia and maximum lateral stiffness so the arm can accelerate at over 550 G during a 4.16 ms enterprise random seek without structural deflection.",
+        metrics: [
+          { label: "PEAK ACCELERATION", value: "> 550 G Rotational Burst" },
+          { label: "AVERAGE SEEK TIME", value: "4.16 ms Read / 4.6 ms Write" },
+          { label: "POSITIONING ACCURACY", value: "± 1.5 Nanometers Triple-Stage" }
+        ],
+        actionLabel: "Trigger High-G Track Seek Burst",
+        explodedY: -0.1,
+        anchorLocal: new THREE.Vector3(1.2, 0.0, 1.5),
+        camPos: new THREE.Vector3(7.6, 2.8, 7.8),
+        camTarget: new THREE.Vector3(2.5, -0.1, 1.8),
+        side: "right"
+      },
+      {
+        id: 7,
+        code: "07",
+        name: "Voice Coil Motor (VCM)",
+        subtitle: "High-Flux Neodymium-Iron-Boron (NdFeB) Dual-Magnet VCM",
+        engineeringFunction: "Generates bidirectional Lorentz electromagnetic force proportional to servo current, driving the actuator assembly smoothly and frictionlessly without mechanical gears or wear points.",
+        technicalSpec: "Sintered Neodymium-Iron-Boron (NdFeB N52SH) permanent magnets bonded to nickel-plated low-carbon steel flux return yokes (1.42 Tesla gap flux), encapsulating a resin-bonded trapezoidal OFHC copper voice coil.",
+        manufacturingPurpose: "Provides ultra-linear torque response and instantaneous electromagnetic braking—including back-EMF harvesting from the spinning spindle to retract heads safely during sudden power loss.",
+        metrics: [
+          { label: "MAGNETIC FLUX DENSITY", value: "1.42 Tesla Air-Gap Field" },
+          { label: "MAGNET GRADE", value: "Sintered NdFeB (Nickel Plated)" },
+          { label: "SERVO BANDWIDTH", value: "42,000+ Position Updates/Sec" }
+        ],
+        actionLabel: "Visualize Electromagnetic Coil Pulse",
+        explodedY: -2.5,
+        anchorLocal: new THREE.Vector3(3.35, 0.0, 5.75),
+        camPos: new THREE.Vector3(-4.8, 0.9, 10.6),
+        camTarget: new THREE.Vector3(1.4, -2.5, 4.9),
+        side: "left"
+      },
+      {
+        id: 8,
+        code: "08",
+        name: "Head Stack Assembly (HSA)",
+        subtitle: "20-Head Precision E-Block, Pivot Cartridge & Flex Preamp",
+        engineeringFunction: "Unifies the precision pivot bearing cartridge, stainless-steel suspension flexures, PZT micro-actuators, and low-noise preamplifier IC into a single balanced mechatronic subsystem.",
+        technicalSpec: "Ultra-low-torque preloaded angular-contact pivot bearing, dynamic polyimide Flexible Printed Circuit (FPC) rated for 600M flex cycles, and shielded differential preamplifier IC mounted milliseconds from the heads.",
+        manufacturingPurpose: "Amplifies microvolt analog read signals right on the actuator body before noise can enter the signal path, while PZT piezoelectric micro-actuators trim head position at kilohertz frequencies.",
+        metrics: [
+          { label: "PREAMP GAIN BANDWIDTH", value: "3.6 GHz Differential Low-Noise" },
+          { label: "ACTUATION TOPOLOGY", value: "VCM Coarse + Dual PZT Fine" },
+          { label: "FPC FLEX ENDURANCE", value: "> 600 Million Seek Cycles" }
+        ],
+        actionLabel: "Inspect Pivot & Preamp Interconnect",
+        explodedY: -4.9,
+        anchorLocal: new THREE.Vector3(2.85, 0.0, 4.35),
+        camPos: new THREE.Vector3(8.5, -1.8, 9.2),
+        camTarget: new THREE.Vector3(3.4, -4.9, 3.8),
+        side: "right"
+      },
+      {
+        id: 9,
+        code: "09",
+        name: "Ramp Load/Unload Mechanism",
+        subtitle: "Outer-Diameter LCP Parking Ramp (600,000+ Cycles)",
+        engineeringFunction: "Safely lifts the read/write head suspensions off the spinning platter surfaces and locks them into recessed parking channels during spin-down, PowerBalance™ idle modes, and physical transport.",
+        technicalSpec: "Injection-molded Liquid Crystal Polymer (LCP) with PTFE low-friction additives, precision-contoured 12° entry ramp profiles positioned at the outer diameter (OD) of the 10-platter stack.",
+        manufacturingPurpose: "Eliminates static friction ('stiction') between ultra-smooth heads and platters at rest and boosts non-operating shock tolerance above 250 G by keeping heads physically separated from media.",
+        metrics: [
+          { label: "NON-OP SHOCK RATING", value: "250 G (2ms Half-Sine)" },
+          { label: "LOAD/UNLOAD CYCLES", value: "600,000+ Verified Operations" },
+          { label: "POLYMER MATERIAL", value: "PTFE-Filled Liquid Crystal Polymer" }
+        ],
+        actionLabel: "Simulate Head Park / Unload Cycle",
+        explodedY: -7.2,
+        anchorLocal: new THREE.Vector3(-2.35, 0.0, 2.55),
+        camPos: new THREE.Vector3(-7.6, -4.2, 8.2),
+        camTarget: new THREE.Vector3(-3.2, -7.2, 2.2),
+        side: "left"
+      },
+      {
+        id: 10,
+        code: "10",
+        name: "Printed Circuit Board (PCB)",
+        subtitle: "12nm Integrated RISC Controller SoC, 512MB Cache & Dual RV Sensors",
+        engineeringFunction: "Executes real-time servo track-following algorithms, LDPC error-correction decoding, Seagate Secure™ cryptographic erase, and 12Gb/s SAS / 6Gb/s SATA host communication at up to 285 MB/s sustained transfer.",
+        technicalSpec: "8-layer high-Tg FR4 inverted board housing Seagate's proprietary 12nm Integrated RISC Controller SoC (3× performance over prior generation), 512 MB DDR4 ECC cache, Smooth motor DSP, and dual Rotational Vibration (RV) accelerometers.",
+        manufacturingPurpose: "Mounted component-side inward against thermal interface pads on the matte-black aluminum base casting so the metal chassis acts as a unified heatsink for the 12nm controller SoC and motor driver ICs.",
+        metrics: [
+          { label: "STORAGE CONTROLLER", value: "12nm Seagate RISC SoC (Mozaic 3+)" },
+          { label: "MULTI-SEGMENT CACHE", value: "512 MB High-Speed DDR4 ECC" },
+          { label: "HOST INTERFACE", value: "12Gb/s SAS / 6Gb/s SATA" }
+        ],
+        actionLabel: "Pulse 12nm SoC & Data Bus",
+        explodedY: -10.1,
+        anchorLocal: new THREE.Vector3(0.0, -0.1, 2.0),
+        camPos: new THREE.Vector3(8.8, -8.2, 10.4),
+        camTarget: new THREE.Vector3(1.8, -10.1, 1.2),
+        side: "right"
+      },
+      {
+        id: 11,
+        code: "11",
+        name: "Base Casting",
+        subtitle: "Deep Matte Black Die-Cast Aluminum Alloy Structural Deck",
+        engineeringFunction: "Serves as the rigid dimensional reference datum for the entire Exos Enterprise drive, uniting the circular platter shroud, actuator bay, helium recirculation channels, and standard 3.5-inch server mounting rails.",
+        technicalSpec: "High-pressure die-cast ADC12 / A380 aluminum alloy finished in deep matte-black anodized coating (#121417) with diamond-CNC machined bearing datums held to ±2 µm flatness.",
+        manufacturingPurpose: "Engineered with finite-element-optimized acoustic stiffening ribs and minimal platter-to-shroud wall clearance to reduce helium pumping power and suppress rotational vibration (RV) in high-density storage arrays.",
+        metrics: [
+          { label: "FORM FACTOR STANDARD", value: "3.5-Inch Enterprise (101.85 × 147 mm)" },
+          { label: "EXTERIOR FINISH", value: "Deep Matte Black Anodized Alloy" },
+          { label: "DATUM MACHINING", value: "± 2.0 Micron CNC Flatness" }
+        ],
+        actionLabel: "Highlight CNC Datum Surfaces",
+        explodedY: -13.4,
+        anchorLocal: new THREE.Vector3(-2.5, -0.3, -1.0),
+        camPos: new THREE.Vector3(-9.5, -9.2, 11.2),
+        camTarget: new THREE.Vector3(-2.5, -13.2, -0.5),
+        side: "left"
+      }
+    ];
+
+    /**
+     * ============================================================================
+     * PART 2: BUILD DOM SECTIONS & PROGRESS RAIL DYNAMICALLY
+     * ============================================================================
+     */
+    function buildDOMSections() {
+      const wrapper = document.getElementById('component-sections-wrapper');
+      const rail = document.getElementById('progress-rail-items');
+
+      // 1. Add Hero node to right rail
+      const allRailStops = [
+        { index: 0, code: "00", name: "Assembled Drive" },
+        ...HDD_COMPONENTS.map(c => ({ index: c.id, code: c.code, name: c.name })),
+        { index: 12, code: "12", name: "Final Lock & Seal" }
+      ];
+
+      rail.innerHTML = allRailStops.map(stop => `
+        <button onclick="scrollToSection(${stop.index})" id="rail-btn-${stop.index}" class="rail-item group flex items-center gap-2.5 py-1 px-1.5 rounded-lg focus:outline-none">
+          <span class="rail-label opacity-0 -translate-x-2 transition-all duration-200 text-[10px] font-mono uppercase tracking-wider text-slate-300 group-hover:text-white bg-black/85 px-2 py-0.5 rounded border border-white/10 whitespace-nowrap">
+            <span class="text-seagate-neon">${stop.code}</span> ${stop.name}
+          </span>
+          <span id="rail-dot-${stop.index}" class="rail-dot w-2 h-2 rounded-full bg-white/25 group-hover:bg-seagate-neon"></span>
+        </button>
+      `).join('');
+
+      // 2. Build 11 Component Scroll Sections
+      wrapper.innerHTML = HDD_COMPONENTS.map((comp) => {
+        const alignClass = comp.side === 'left'
+          ? 'lg:justify-start'
+          : 'lg:justify-end';
+
+        return `
+          <section id="section-${comp.id}" data-index="${comp.id}" class="min-h-screen w-full flex items-end lg:items-center ${alignClass} px-3 sm:px-10 lg:px-16 pt-16 pb-14 sm:py-20 relative">
+            <article id="card-${comp.id}" class="mobile-telemetry-card w-full max-w-lg tech-panel rounded-2xl p-3.5 sm:p-7 interactive-el transition-all duration-500 opacity-90 translate-y-2">
+              
+              <!-- Component Header (Interactive on Mobile for Minimize/Expand) -->
+              <div class="flex items-center justify-between gap-1.5 pb-2.5 sm:pb-3 mb-2 sm:mb-4 border-b border-white/10 shrink-0">
+                <div onclick="if(window.innerWidth < 768) toggleMobileCardsCollapse()" class="flex items-center gap-2 cursor-pointer md:cursor-default min-w-0">
+                  <span class="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md bg-seagate-green/20 border border-seagate-green/50 font-mono text-[10px] sm:text-xs font-bold text-seagate-neon shrink-0">
+                    LAYER ${comp.code} / 11
+                  </span>
+                  <span class="text-[11px] font-mono text-white font-medium truncate md:hidden">
+                    ${comp.name}
+                  </span>
+                  <span class="hidden md:inline text-[11px] font-mono uppercase tracking-widest text-slate-400">
+                    Z-AXIS EXPLODED TELEMETRY
+                  </span>
+                </div>
+
+                <div class="flex items-center gap-1 shrink-0">
+                  <!-- Mobile Minimize / Expand Drawer Toggle Button -->
+                  <button onclick="toggleMobileCardsCollapse()" class="md:hidden px-2 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-mono text-seagate-neon flex items-center gap-1 transition-colors" title="Minimize or Expand Telemetry Card">
+                    <span class="mobile-collapse-label">HIDE</span>
+                    <svg class="w-3 h-3 mobile-collapse-icon transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                  </button>
+                  <button onclick="scrollToSection(${comp.id - 1})" class="p-1 sm:p-1.5 rounded hover:bg-white/10 text-slate-400 hover:text-white transition-colors" title="Previous Component">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+                  </button>
+                  <button onclick="scrollToSection(${comp.id + 1})" class="p-1 sm:p-1.5 rounded hover:bg-white/10 text-slate-400 hover:text-white transition-colors" title="Next Component">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Collapsible Telemetry Body (Scrollable & Compact on Mobile) -->
+              <div class="telemetry-collapsible-body mobile-telemetry-scroll transition-opacity duration-200">
+                <!-- Component Title & Subtitle -->
+                <h2 class="text-lg sm:text-3xl font-light tracking-tight text-white leading-snug">
+                  ${comp.name}
+                </h2>
+                <p class="text-[11px] sm:text-sm font-mono text-seagate-green mt-0.5 mb-2.5 sm:mb-5">
+                  ${comp.subtitle}
+                </p>
+
+                <!-- Mobile Compact Segmented Tabs (< 768px only) -->
+                <div class="grid grid-cols-3 gap-1 p-1 rounded-lg bg-black/50 border border-white/10 mb-2.5 md:hidden font-mono text-[10px]">
+                  <button onclick="switchMobileSpecTab(${comp.id}, 'func')" id="tab-btn-${comp.id}-func" class="py-1 px-1.5 rounded bg-seagate-green/25 text-seagate-neon border border-seagate-green/40 font-medium truncate">
+                    Function
+                  </button>
+                  <button onclick="switchMobileSpecTab(${comp.id}, 'spec')" id="tab-btn-${comp.id}-spec" class="py-1 px-1.5 rounded text-slate-400 hover:text-white border border-transparent truncate">
+                    Tech Spec
+                  </button>
+                  <button onclick="switchMobileSpecTab(${comp.id}, 'mfg')" id="tab-btn-${comp.id}-mfg" class="py-1 px-1.5 rounded text-slate-400 hover:text-white border border-transparent truncate">
+                    Purpose
+                  </button>
+                </div>
+
+                <!-- 3 Required Engineering Blocks (Tabbed on Mobile, Full Stack on Desktop) -->
+                <div class="space-y-2 sm:space-y-3.5 text-xs sm:text-[13px] leading-relaxed">
+                  <div id="tab-panel-${comp.id}-func" class="p-2.5 sm:p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div class="text-[9px] sm:text-[10px] font-mono uppercase tracking-widest text-seagate-neon mb-0.5 sm:mb-1 flex items-center gap-1.5">
+                      <span class="w-1.5 h-1.5 rounded-full bg-seagate-neon"></span>
+                      Engineering Function
+                    </div>
+                    <p class="text-slate-200 font-light text-[11px] sm:text-[13px] leading-relaxed">${comp.engineeringFunction}</p>
+                  </div>
+
+                  <div id="tab-panel-${comp.id}-spec" class="hidden md:block p-2.5 sm:p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div class="text-[9px] sm:text-[10px] font-mono uppercase tracking-widest text-amber-200/90 mb-0.5 sm:mb-1 flex items-center gap-1.5">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-300"></span>
+                      Technical Specification
+                    </div>
+                    <p class="text-slate-300 font-light text-[11px] sm:text-[13px] leading-relaxed">${comp.technicalSpec}</p>
+                  </div>
+
+                  <div id="tab-panel-${comp.id}-mfg" class="hidden md:block p-2.5 sm:p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div class="text-[9px] sm:text-[10px] font-mono uppercase tracking-widest text-sky-300 mb-0.5 sm:mb-1 flex items-center gap-1.5">
+                      <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+                      Real-World Manufacturing Purpose
+                    </div>
+                    <p class="text-slate-300 font-light text-[11px] sm:text-[13px] leading-relaxed">${comp.manufacturingPurpose}</p>
+                  </div>
+                </div>
+
+                <!-- Key Telemetry Metrics Grid -->
+                <div class="grid grid-cols-3 gap-1.5 sm:gap-2.5 mt-2.5 sm:mt-4 pt-2.5 sm:pt-4 border-t border-white/10 font-mono">
+                  ${comp.metrics.map(m => `
+                    <div class="bg-black/40 p-1.5 sm:p-2.5 rounded-lg border border-white/5">
+                      <div class="text-[8px] sm:text-[9px] text-slate-400 uppercase truncate">${m.label}</div>
+                      <div class="text-[10px] sm:text-xs text-white font-medium mt-0.5 leading-tight">${m.value}</div>
+                    </div>
+                  `).join('')}
+                </div>
+
+                <!-- Interactive Component Action Footer -->
+                <div class="mt-2.5 sm:mt-4 pt-2.5 sm:pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+                  <button onclick="triggerComponentAction(${comp.id})" class="px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-seagate-green/15 hover:bg-seagate-green/30 border border-seagate-green/50 text-seagate-neon font-mono text-[10px] sm:text-[11px] tracking-wider transition-all flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-seagate-neon animate-pulse"></span>
+                    ${comp.actionLabel}
+                  </button>
+                  <span class="text-[9px] sm:text-[10px] font-mono text-slate-400">DRAG 3D TO ORBIT</span>
+                </div>
+              </div>
+
+            </article>
+          </section>
+        `;
+      }).join('');
+    }
+
+    /**
+     * ============================================================================
+     * PART 3: PROCEDURAL HIGH-RESOLUTION PBR TEXTURE GENERATORS
+     * ============================================================================
+     * Generates studio environment maps, realistic Seagate Exos enterprise labels,
+     * magnetic platter radial track maps, and enterprise PCB circuit textures
+     * entirely in memory for instant, reliable, 60 FPS rendering.
+     */
+    function createStudioEnvMap(renderer) {
+      const pmremGenerator = new THREE.PMREMGenerator(renderer);
+      pmremGenerator.compileCubemapShader();
+
+      const envScene = new THREE.Scene();
+      envScene.background = new THREE.Color(0x050608);
+
+      const boxGeom = new THREE.PlaneGeometry(10, 10);
+
+      // Overhead cool-silver studio softbox
+      const topLight = new THREE.Mesh(
+        boxGeom,
+        new THREE.MeshBasicMaterial({ color: 0xeef4ff, side: THREE.DoubleSide })
+      );
+      topLight.position.set(0, 12, 0);
+      topLight.rotation.x = Math.PI / 2;
+      topLight.scale.set(2.5, 1.5, 1);
+      envScene.add(topLight);
+
+      // Left cool-blue rim strip
+      const blueStrip = new THREE.Mesh(
+        boxGeom,
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide })
+      );
+      blueStrip.position.set(-14, 4, -6);
+      blueStrip.lookAt(0, 0, 0);
+      blueStrip.scale.set(0.6, 2.2, 1);
+      envScene.add(blueStrip);
+
+      // Right champagne-silver key strip
+      const warmStrip = new THREE.Mesh(
+        boxGeom,
+        new THREE.MeshBasicMaterial({ color: 0xffe8c8, side: THREE.DoubleSide })
+      );
+      warmStrip.position.set(14, 6, 8);
+      warmStrip.lookAt(0, 0, 0);
+      warmStrip.scale.set(0.8, 2.0, 1);
+      envScene.add(warmStrip);
+
+      // Subtle Seagate electric-green accent reflection strip
+      const greenStrip = new THREE.Mesh(
+        boxGeom,
+        new THREE.MeshBasicMaterial({ color: 0x6ebe49, side: THREE.DoubleSide })
+      );
+      greenStrip.position.set(8, -10, 10);
+      greenStrip.lookAt(0, 0, 0);
+      greenStrip.scale.set(1.2, 0.4, 1);
+      envScene.add(greenStrip);
+
+      const envRT = pmremGenerator.fromScene(envScene, 0.04);
+      pmremGenerator.dispose();
+      return envRT.texture;
+    }
+
+    // Generate Realistic Seagate Exos Enterprise (Mozaic 3+™) Top Cover Texture Matching User Image
+    function createSeagateTopLabelTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1400;
+      canvas.height = 2048;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      // 1. Outer Brushed Silver/Chrome Metallic Perimeter Bezel (#d8dde4)
+      const rimGrad = ctx.createLinearGradient(0, 0, W, H);
+      rimGrad.addColorStop(0, '#eef2f6');
+      rimGrad.addColorStop(0.25, '#cfd6df');
+      rimGrad.addColorStop(0.5, '#f4f7fa');
+      rimGrad.addColorStop(0.75, '#b8c1cc');
+      rimGrad.addColorStop(1, '#e1e6ed');
+      ctx.fillStyle = rimGrad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Subtle vertical brushed metal grain on outer silver bezel
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+      ctx.lineWidth = 1.5;
+      for (let x = 0; x < W; x += 4) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
+        ctx.stroke();
+      }
+
+      // 2. Recessed Dark Perimeter Channel Framing the Inner Label
+      const pad = 52;
+      const cornerR = 135;
+      ctx.fillStyle = '#14171c';
+      ctx.beginPath();
+      ctx.roundRect(pad - 12, pad - 12, W - (pad - 12) * 2, H - (pad - 12) * 2, cornerR + 8);
+      ctx.fill();
+
+      // Inner Silver Highlight Pinstripe
+      ctx.strokeStyle = '#dcdfe5';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.roundRect(pad - 3, pad - 3, W - (pad - 3) * 2, H - (pad - 3) * 2, cornerR + 2);
+      ctx.stroke();
+
+      // 3. Clip to Inner Rounded-Rectangle Faceplate Area
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(pad, pad, W - pad * 2, H - pad * 2, cornerR);
+      ctx.clip();
+
+      // Deep Matte Jet-Black Background (#07080a)
+      ctx.fillStyle = '#07080a';
+      ctx.fillRect(pad, pad, W - pad * 2, H - pad * 2);
+
+      // 4. Top White Seagate Spiral/Swirl Logo + "SEAGATE" Wide-Tracked Wordmark
+      const logoCenterX = W * 0.345;
+      const logoCenterY = 235;
+      ctx.save();
+      ctx.translate(logoCenterX, logoCenterY);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 14;
+
+      // Outer & inner intertwined Seagate S-swirl arcs
+      ctx.beginPath();
+      ctx.arc(0, 0, 56, -0.65, Math.PI * 0.78, false);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(0, 0, 56, Math.PI * 0.35, Math.PI * 1.78, false);
+      ctx.stroke();
+
+      ctx.lineWidth = 12;
+      ctx.beginPath();
+      ctx.arc(-4, -3, 30, -0.45, Math.PI * 0.85, false);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(4, 3, 30, Math.PI * 0.55, Math.PI * 1.85, false);
+      ctx.stroke();
+      ctx.restore();
+
+      // Clean White "SEAGATE" Wordmark with wide letter-spacing
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '500 50px Inter, sans-serif';
+      const brandWord = 'SEAGATE';
+      let charX = logoCenterX + 92;
+      for (let i = 0; i < brandWord.length; i++) {
+        ctx.fillText(brandWord[i], charX, logoCenterY + 18);
+        charX += ctx.measureText(brandWord[i]).width + 18;
+      }
+
+      // 5. Crisp Seagate Green (#6ebe49) Upper Curved Arc Across the Black Faceplate
+      ctx.strokeStyle = '#6ebe49';
+      ctx.lineWidth = 9;
+      ctx.beginPath();
+      ctx.moveTo(pad - 10, 485);
+      ctx.quadraticCurveTo(W * 0.5, 295, W - pad + 10, 520);
+      ctx.stroke();
+
+      // 6. Center Iconic Exos Emblem (Vibrant Green Circle Ring + White Starfighter Silhouette)
+      const emblemX = W * 0.5;
+      const emblemY = 915;
+      const ringRadius = 215;
+
+      // Vibrant Seagate Green Circular Ring (#6ebe49)
+      ctx.strokeStyle = '#6ebe49';
+      ctx.lineWidth = 34;
+      ctx.beginPath();
+      ctx.arc(emblemX, emblemY, ringRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Subtle dark outline around the starfighter where it crosses the green ring for crispness
+      ctx.save();
+      ctx.translate(emblemX, emblemY);
+
+      // Draw Exact White Swept-Wing Starfighter Silhouette (Angled ~40° Upward-Right)
+      const drawStarfighterPath = (context) => {
+        context.beginPath();
+        // Sharp Nose Cone extending past upper-right of the ring
+        context.moveTo(318, -210);
+        // Upper fuselage edge coming back toward left/top delta wing
+        context.lineTo(42, -92);
+        // Left/Top Main Swept Wing Leading Edge
+        context.lineTo(-175, -182);
+        // Left/Top Wingtip bevel
+        context.lineTo(-245, -92);
+        // Left/Top Wing Trailing Notch
+        context.lineTo(-182, -55);
+        context.lineTo(-95, -62);
+        // Rear fuselage taper toward exhaust spike
+        context.lineTo(-142, 32);
+        // Rear Lower-Left Exhaust Spike extending past lower-left of the ring
+        context.lineTo(-228, 128);
+        context.lineTo(-214, 140);
+        context.lineTo(-108, 72);
+        // Bottom/Right Main Wing & Tail Stabilizer Assembly
+        context.lineTo(-42, 92);
+        context.lineTo(-32, 205);
+        // Lower Tail Fin Tip
+        context.lineTo(-65, 255);
+        context.lineTo(-55, 292);
+        context.lineTo(48, 265);
+        // Right/Bottom Main Wing Trailing & Leading Edge back to fuselage
+        context.lineTo(105, -18);
+        // Back to Nose Cone
+        context.closePath();
+      };
+
+      // Thin black separator stroke so starfighter pops cleanly over the green ring
+      ctx.strokeStyle = '#07080a';
+      ctx.lineWidth = 14;
+      ctx.lineJoin = 'miter';
+      drawStarfighterPath(ctx);
+      ctx.stroke();
+
+      // Crisp White Starfighter Fill
+      ctx.fillStyle = '#ffffff';
+      drawStarfighterPath(ctx);
+      ctx.fill();
+      ctx.restore();
+
+      // 7. Bold Metallic Silver "EXOS™" Wordmark Beneath the Emblem
+      const exosY = 1365;
+      const silverTextGrad = ctx.createLinearGradient(0, exosY - 110, 0, exosY + 15);
+      silverTextGrad.addColorStop(0, '#ffffff');
+      silverTextGrad.addColorStop(0.52, '#d4dce4');
+      silverTextGrad.addColorStop(0.58, '#8f9aa8');
+      silverTextGrad.addColorStop(1, '#e2e8f0');
+
+      ctx.fillStyle = silverTextGrad;
+      ctx.font = '800 132px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('EXOS', W * 0.49, exosY);
+
+      // Trademark "TM" Superscript
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '700 34px Inter, sans-serif';
+      ctx.fillText('TM', W * 0.49 + 215, exosY - 78);
+
+      // Signature Bright Green Triangle Detail Inside the Bottom of the Letter "X"
+      const xCenter = W * 0.49 - 52;
+      ctx.fillStyle = '#6ebe49';
+      ctx.beginPath();
+      ctx.moveTo(xCenter, exosY - 34);
+      ctx.lineTo(xCenter - 22, exosY + 2);
+      ctx.lineTo(xCenter + 22, exosY + 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // 8. Bottom Vibrant Seagate Green (#6ebe49) Block with Smooth Concave Curved Top Edge
+      const greenTopLeftY = 1470;
+      const greenDipCenterY = 1665;
+      const greenTopRightY = 1470;
+
+      const mozaicGreenGrad = ctx.createLinearGradient(0, 1470, 0, H - pad);
+      mozaicGreenGrad.addColorStop(0, '#72c44c');
+      mozaicGreenGrad.addColorStop(1, '#63b53e');
+      ctx.fillStyle = mozaicGreenGrad;
+
+      ctx.beginPath();
+      ctx.moveTo(pad - 10, greenTopLeftY);
+      ctx.quadraticCurveTo(W * 0.5, greenDipCenterY, W - pad + 10, greenTopRightY);
+      ctx.lineTo(W - pad + 10, H - pad + 10);
+      ctx.lineTo(pad - 10, H - pad + 10);
+      ctx.closePath();
+      ctx.fill();
+
+      // 9. Authentic Black Geometric "mozaic™" Wordmark Centered Inside the Green Section
+      const mozY = 1815;
+      ctx.fillStyle = '#07080a';
+      ctx.font = '300 96px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('mozaic', W * 0.5, mozY);
+
+      // Small green dot inside the 'o' of mozaic & TM mark
+      ctx.font = '600 22px Inter, sans-serif';
+      ctx.fillText('TM', W * 0.5 + 182, mozY - 48);
+
+      ctx.restore();
+      ctx.textAlign = 'left';
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.anisotropy = 8;
+      return tex;
+    }
+
+    // Generate Platter Concentric Magnetic Track & Stroboscopic Texture
+    function createPlatterTexture(withStrobe = true) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 1024;
+      const ctx = canvas.getContext('2d');
+      const cx = 512, cy = 512;
+
+      // Mirror chrome base
+      ctx.fillStyle = '#d4dce6';
+      ctx.fillRect(0, 0, 1024, 1024);
+
+      // Concentric microscopic magnetic data tracks
+      for (let r = 140; r < 495; r += 2) {
+        const lum = 205 + Math.sin(r * 0.35) * 22 + ((r % 18 === 0) ? -25 : 0);
+        ctx.strokeStyle = `rgb(${lum}, ${lum + 4}, ${lum + 10})`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Stroboscopic Servo Sector Arcs & Seagate Neon Telemetry Wedges
+      if (withStrobe) {
+        const sectors = 24;
+        for (let s = 0; s < sectors; s++) {
+          const angle = (s / sectors) * Math.PI * 2;
+          ctx.strokeStyle = (s % 4 === 0) ? 'rgba(0, 255, 102, 0.78)' : 'rgba(56, 189, 248, 0.38)';
+          ctx.lineWidth = (s % 4 === 0) ? 3.5 : 1.5;
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(angle) * 165, cy + Math.sin(angle) * 165);
+          ctx.lineTo(cx + Math.cos(angle + 0.03) * 485, cy + Math.sin(angle + 0.03) * 485);
+          ctx.stroke();
+        }
+
+        // Concentric green index calibration rings
+        [210, 330, 445].forEach(r => {
+          ctx.strokeStyle = 'rgba(0, 255, 102, 0.55)';
+          ctx.lineWidth = 2.5;
+          ctx.setLineDash([14, 18]);
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+        ctx.setLineDash([]);
+      }
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.anisotropy = 8;
+      return tex;
+    }
+
+    // Generate Enterprise PCB Copper Traces & Silkscreen Texture
+    function createPCBTexture() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 1024;
+      const ctx = canvas.getContext('2d');
+
+      // Deep dark emerald-graphite solder mask
+      ctx.fillStyle = '#092418';
+      ctx.fillRect(0, 0, 1024, 1024);
+
+      // Grid of high-speed differential copper traces
+      ctx.strokeStyle = '#185838';
+      ctx.lineWidth = 3;
+      for (let i = 40; i < 980; i += 18) {
+        ctx.beginPath();
+        ctx.moveTo(i, 60);
+        ctx.lineTo(i, 520);
+        ctx.lineTo(i + 45, 580);
+        ctx.lineTo(i + 45, 960);
+        ctx.stroke();
+      }
+
+      // Gold-plated solder pads & via arrays
+      ctx.fillStyle = '#d4af37';
+      for (let x = 80; x < 940; x += 42) {
+        for (let y = 80; y < 940; y += 42) {
+          if ((x + y) % 3 === 0) {
+            ctx.beginPath();
+            ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // White Silkscreen markings
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(180, 220, 240, 240);
+      ctx.strokeRect(520, 250, 210, 150);
+      ctx.strokeRect(260, 560, 190, 190);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.font = '600 22px "JetBrains Mono", monospace';
+      ctx.fillText('SEAGATE REV 4.2 E-PCB', 180, 175);
+      ctx.fillText('U1: CONTROLLER SOC', 185, 208);
+      ctx.fillText('U2: DDR4 512MB', 525, 238);
+      ctx.fillText('U3: SMOOTH VCM DSP', 265, 548);
+
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.anisotropy = 8;
+      return tex;
+    }
+
+    /**
+     * ============================================================================
+     * PART 4: THREE.JS SCENE, CAMERA & PHYSICALLY ACCURATE 11-LAYER HDD BUILDER
+     * ============================================================================
+     */
+    let scene, camera, renderer, envMap;
+    let hddRootGroup;
+    const layerGroups = []; // Stores the 11 distinct component groups (indices 0..10)
+    const rotatingSpindleParts = []; // Parts that spin at 7,200 / 15,000 RPM
+    const sweepingActuatorParts = []; // Parts that pivot around the actuator axis
+    const topCoverBolts = []; // Torx bolts that unscrew/lock during assembly
+    let platterStandardTexture, platterStrobeTexture;
+    let platterTopMat;
+    let headLaserLight, vcmPulseMat, gasketMat;
+
+    // Mechanical Coordinates (Authentic 3.5" HDD Proportions: 10.2 × 14.7 × 2.61 units)
+    const SPINDLE_POS = new THREE.Vector3(0.0, 0.0, -1.65);
+    const ACTUATOR_PIVOT = new THREE.Vector3(2.85, 0.0, 4.35);
+
+    // State & Interactive Telemetry Variables
+    const state = {
+      scrollProgress: 0,      // 0.0 to 1.0 across entire page
+      activeSection: 0,       // 0 = Hero, 1..11 = Components, 12 = Final Assembly
+      explosionFactor: 0,     // 0.0 (assembled) to 1.0 (exploded)
+      targetExplosion: 0,
+      manualExplodeOverride: false,
+      manualExplodeValue: 0,
+
+      freeOrbitMode: false,
+      isDragging: false,
+      dragStart: { x: 0, y: 0 },
+      userOrbitYaw: 0,
+      userOrbitPitch: 0,
+      userZoomOffset: 0,
+
+      rpmMode: 0,             // 0 = 7200 RPM, 1 = 15000 RPM, 2 = 60 RPM Macro
+      strobeEnabled: true,
+      headsParked: false,
+      preload: false,
+      platterAngle: 0,
+      actuatorAngle: 0.42,    // Radians around ACTUATOR_PIVOT (0.28 = ID, 0.68 = OD, 0.79 = Parked on Ramp)
+      targetActuatorAngle: 0.42,
+      seekTimer: 0,
+      lockdownPulse: 0,
+      actionPulseTimer: 0,
+      focusedActionLayer: -1,
+      mobileCardCollapsed: false
+    };
+
+    // Camera Interpolation Vectors
+    const currentCamPos = new THREE.Vector3(11.5, 10.5, 15.5);
+    const currentCamTarget = new THREE.Vector3(0, 0, 0);
+    const desiredCamPos = new THREE.Vector3(11.5, 10.5, 15.5);
+    const desiredCamTarget = new THREE.Vector3(0, 0, 0);
+
+    function initThreeEngine() {
+      const container = document.getElementById('webgl-container');
+
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x050608, 0.012);
+
+      camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 0.1, 200);
+      camera.position.copy(currentCamPos);
+
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        powerPreference: 'high-performance',
+        alpha: false
+      });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.18;
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      container.appendChild(renderer.domElement);
+
+      // Generate Studio Reflection Environment
+      envMap = createStudioEnvMap(renderer);
+      scene.environment = envMap;
+
+      // Studio Cinematic Lighting Rig
+      const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.35);
+      scene.add(ambientLight);
+
+      // Key Champagne-Silver Directional Spotlight
+      const keyLight = new THREE.DirectionalLight(0xfff6e5, 2.2);
+      keyLight.position.set(14, 24, 16);
+      scene.add(keyLight);
+
+      // Cool-Blue Industrial Rim Light
+      const blueRimLight = new THREE.DirectionalLight(0x38bdf8, 1.65);
+      blueRimLight.position.set(-18, 10, -14);
+      scene.add(blueRimLight);
+
+      // Seagate Electric-Green Under/Side Accent Light
+      const seagateGreenLight = new THREE.PointLight(0x00ff66, 1.8, 38);
+      seagateGreenLight.position.set(10, -8, 12);
+      scene.add(seagateGreenLight);
+
+      // Macro Fill Light that tracks the camera for crisp close-up inspection
+      const camFillLight = new THREE.PointLight(0xffffff, 0.9, 32);
+      camera.add(camFillLight);
+      scene.add(camera);
+
+      // Root group for the entire Seagate 3.5" Enterprise HDD
+      hddRootGroup = new THREE.Group();
+      scene.add(hddRootGroup);
+
+      // Construct all 11 authentic mechanical layers
+      buildSeagateEnterpriseHDD();
+
+      // Bind Interaction Events
+      setupInteractionEvents(container);
+    }
+
+    /**
+     * Constructs a rounded rectangular ExtrudeGeometry for 3.5-inch HDD profiles
+     */
+    function createRoundedRectShape(width, length, radius) {
+      const shape = new THREE.Shape();
+      const hw = width / 2;
+      const hl = length / 2;
+      shape.moveTo(-hw + radius, -hl);
+      shape.lineTo(hw - radius, -hl);
+      shape.quadraticCurveTo(hw, -hl, hw, -hl + radius);
+      shape.lineTo(hw, hl - radius);
+      shape.quadraticCurveTo(hw, hl, hw - radius, hl);
+      shape.lineTo(-hw + radius, hl);
+      shape.quadraticCurveTo(-hw, hl, -hw, hl - radius);
+      shape.lineTo(-hw, -hl + radius);
+      shape.quadraticCurveTo(-hw, -hl, -hw + radius, -hl);
+      return shape;
+    }
+
+    /**
+     * Builds all 11 authentic internal & external components of the Seagate Exos HDD
+     */
+    function buildSeagateEnterpriseHDD() {
+      // Shared PBR Materials
+      const brushedSteelMat = new THREE.MeshStandardMaterial({
+        color: 0xdce2e9,
+        metalness: 0.90,
+        roughness: 0.20
+      });
+
+      // Deep Matte Black Anodized Aluminum for Base Casting & Side Profile (matches Exos Mozaic photo)
+      const dieCastAluminumMat = new THREE.MeshStandardMaterial({
+        color: 0x101317,
+        metalness: 0.55,
+        roughness: 0.62
+      });
+
+      const machinedCncAluminumMat = new THREE.MeshStandardMaterial({
+        color: 0xcbd5e1,
+        metalness: 0.92,
+        roughness: 0.16
+      });
+
+      const darkAnodizedMat = new THREE.MeshStandardMaterial({
+        color: 0x0b0d10,
+        metalness: 0.72,
+        roughness: 0.36
+      });
+
+      const chromeMirrorMat = new THREE.MeshStandardMaterial({
+        color: 0xf1f5f9,
+        metalness: 0.98,
+        roughness: 0.05
+      });
+
+      const goldContactMat = new THREE.MeshStandardMaterial({
+        color: 0xfbbf24,
+        metalness: 0.95,
+        roughness: 0.14
+      });
+
+      const copperCoilMat = new THREE.MeshStandardMaterial({
+        color: 0xd97706,
+        metalness: 0.88,
+        roughness: 0.22
+      });
+
+      const seagateAccentMat = new THREE.MeshStandardMaterial({
+        color: 0x00ff66,
+        emissive: 0x00ff66,
+        emissiveIntensity: 0.45,
+        metalness: 0.3,
+        roughness: 0.2
+      });
+
+      // Initialize the 11 Layer Groups
+      for (let i = 0; i < 11; i++) {
+        const grp = new THREE.Group();
+        grp.name = `Layer_${i + 1}_${HDD_COMPONENTS[i].name}`;
+        hddRootGroup.add(grp);
+        layerGroups.push(grp);
+      }
+
+      // =========================================================================
+      // LAYER 1: TOP COVER (Brushed Silver Bezel + Exos™ Mozaic™ Faceplate)
+      // =========================================================================
+      const layer1 = layerGroups[0];
+      const topLabelTex = createSeagateTopLabelTexture();
+      const coverShape = createRoundedRectShape(10.0, 14.5, 0.72);
+      const coverGeom = new THREE.ExtrudeGeometry(coverShape, {
+        depth: 0.16,
+        bevelEnabled: true,
+        bevelSegments: 4,
+        steps: 1,
+        bevelSize: 0.06,
+        bevelThickness: 0.06
+      });
+      coverGeom.rotateX(Math.PI / 2);
+
+      const coverPlate = new THREE.Mesh(coverGeom, brushedSteelMat);
+      coverPlate.position.y = 1.22;
+      layer1.add(coverPlate);
+
+      // Raised Brushed Silver Perimeter Bezel Ring Framing the Exos Mozaic Faceplate
+      const bezelOuterShape = createRoundedRectShape(10.02, 14.52, 0.72);
+      const bezelInnerHole = createRoundedRectShape(9.28, 13.78, 0.56);
+      bezelOuterShape.holes.push(bezelInnerHole);
+      const bezelGeom = new THREE.ExtrudeGeometry(bezelOuterShape, {
+        depth: 0.045,
+        bevelEnabled: true,
+        bevelSegments: 3,
+        steps: 1,
+        bevelSize: 0.02,
+        bevelThickness: 0.02
+      });
+      bezelGeom.rotateX(Math.PI / 2);
+      const silverBezelMesh = new THREE.Mesh(bezelGeom, chromeMirrorMat);
+      silverBezelMesh.position.y = 1.32;
+      layer1.add(silverBezelMesh);
+
+      // Top Label Plate with Exact Seagate Exos™ Mozaic™ Graphic
+      const labelPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(9.88, 14.38),
+        new THREE.MeshStandardMaterial({
+          map: topLabelTex,
+          metalness: 0.18,
+          roughness: 0.34
+        })
+      );
+      labelPlane.rotation.x = -Math.PI / 2;
+      labelPlane.position.y = 1.292;
+      layer1.add(labelPlane);
+
+      // 6 Perimeter Flush Fastener Pins (Hidden under bezel when sealed, visible during disassembly)
+      const boltCoords = [
+        [-4.62, -6.75], [4.62, -6.75],
+        [-4.62, 0.0],   [4.62, 0.0],
+        [-4.62, 6.75],  [4.62, 6.75]
+      ];
+      boltCoords.forEach(([bx, bz]) => {
+        const boltGroup = new THREE.Group();
+        boltGroup.position.set(bx, 1.15, bz);
+
+        const head = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.16, 0.16, 0.06, 16),
+          chromeMirrorMat
+        );
+        const torxStar = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.08, 0.08, 0.07, 6),
+          darkAnodizedMat
+        );
+        const thread = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.08, 0.08, 0.38, 12),
+          brushedSteelMat
+        );
+        thread.position.y = -0.20;
+
+        boltGroup.add(head, torxStar, thread);
+        layer1.add(boltGroup);
+        topCoverBolts.push(boltGroup);
+      });
+
+      // =========================================================================
+      // LAYER 2: SEALING GASKET (Hermetic Perimeter Elastomeric Seal)
+      // =========================================================================
+      const layer2 = layerGroups[1];
+      const outerGasketShape = createRoundedRectShape(9.9, 14.4, 0.52);
+      const innerGasketHole = createRoundedRectShape(9.35, 13.85, 0.36);
+      outerGasketShape.holes.push(innerGasketHole);
+
+      const gasketGeom = new THREE.ExtrudeGeometry(outerGasketShape, {
+        depth: 0.10,
+        bevelEnabled: true,
+        bevelSegments: 2,
+        steps: 1,
+        bevelSize: 0.03,
+        bevelThickness: 0.03
+      });
+      gasketGeom.rotateX(Math.PI / 2);
+
+      gasketMat = new THREE.MeshStandardMaterial({
+        color: 0x111827,
+        emissive: 0x00ff66,
+        emissiveIntensity: 0.06,
+        metalness: 0.15,
+        roughness: 0.65
+      });
+      const gasketMesh = new THREE.Mesh(gasketGeom, gasketMat);
+      gasketMesh.position.y = 1.05;
+      layer2.add(gasketMesh);
+
+      // Subtle Seagate Green Micro-Bead Seal Indicator inside Gasket
+      const innerSealShape = createRoundedRectShape(9.64, 14.14, 0.44);
+      const innerSealHole = createRoundedRectShape(9.56, 14.06, 0.42);
+      innerSealShape.holes.push(innerSealHole);
+      const sealLineGeom = new THREE.ExtrudeGeometry(innerSealShape, { depth: 0.03, bevelEnabled: false });
+      sealLineGeom.rotateX(Math.PI / 2);
+      const sealLineMesh = new THREE.Mesh(sealLineGeom, seagateAccentMat);
+      sealLineMesh.position.y = 1.07;
+      layer2.add(sealLineMesh);
+
+      // =========================================================================
+      // LAYER 3: MAGNETIC PLATTERS (Multi-Platter Stack with CoCrPt Mirror Media)
+      // =========================================================================
+      const layer3 = layerGroups[2];
+      const platterSpinGroup = new THREE.Group();
+      platterSpinGroup.position.copy(SPINDLE_POS);
+      layer3.add(platterSpinGroup);
+      rotatingSpindleParts.push(platterSpinGroup);
+
+      platterStrobeTexture = createPlatterTexture(true);
+      platterStandardTexture = createPlatterTexture(false);
+
+      platterTopMat = new THREE.MeshStandardMaterial({
+        color: 0xeef2f6,
+        map: platterStrobeTexture,
+        metalness: 0.96,
+        roughness: 0.06
+      });
+
+      const platterYPositions = [0.68, 0.34, 0.0, -0.34, -0.68];
+      platterYPositions.forEach((py, idx) => {
+        // Outer recording disk with center spindle cutout
+        const diskShape = new THREE.Shape();
+        diskShape.absarc(0, 0, 4.62, 0, Math.PI * 2, false);
+        const centerHole = new THREE.Path();
+        centerHole.absarc(0, 0, 1.32, 0, Math.PI * 2, true);
+        diskShape.holes.push(centerHole);
+
+        const diskGeom = new THREE.ExtrudeGeometry(diskShape, {
+          depth: 0.065,
+          bevelEnabled: true,
+          bevelSegments: 2,
+          steps: 1,
+          bevelSize: 0.015,
+          bevelThickness: 0.015
+        });
+        diskGeom.rotateX(Math.PI / 2);
+
+        const diskMesh = new THREE.Mesh(diskGeom, chromeMirrorMat);
+        diskMesh.position.y = py;
+        platterSpinGroup.add(diskMesh);
+
+        // Top & bottom magnetic recording track visual layer
+        const trackRing = new THREE.Mesh(
+          new THREE.RingGeometry(1.36, 4.58, 64),
+          platterTopMat
+        );
+        trackRing.rotation.x = -Math.PI / 2;
+        trackRing.position.y = py + 0.022;
+        platterSpinGroup.add(trackRing);
+
+        // Precision CNC Aluminum Spacer Ring between platters
+        if (idx < platterYPositions.length - 1) {
+          const spacer = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.48, 1.48, 0.26, 36, 1, true),
+            machinedCncAluminumMat
+          );
+          spacer.position.y = py - 0.17;
+          platterSpinGroup.add(spacer);
+        }
+      });
+
+      // =========================================================================
+      // LAYER 4: SPINDLE MOTOR (FDB Brushless DC Hub + 12-Slot Copper Stator)
+      // =========================================================================
+      const layer4 = layerGroups[3];
+      const spindleBaseGroup = new THREE.Group();
+      spindleBaseGroup.position.copy(SPINDLE_POS);
+      layer4.add(spindleBaseGroup);
+
+      // Stationary Base Stator Flange & 12-Pole Copper Windings
+      const statorFlange = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.55, 1.65, 0.18, 36),
+        machinedCncAluminumMat
+      );
+      statorFlange.position.y = -0.85;
+      spindleBaseGroup.add(statorFlange);
+
+      for (let p = 0; p < 12; p++) {
+        const angle = (p / 12) * Math.PI * 2;
+        const coilPole = new THREE.Mesh(
+          new THREE.BoxGeometry(0.28, 0.45, 0.42),
+          copperCoilMat
+        );
+        coilPole.position.set(Math.cos(angle) * 0.92, -0.45, Math.sin(angle) * 0.92);
+        coilPole.rotation.y = -angle;
+        spindleBaseGroup.add(coilPole);
+      }
+
+      // Rotating FDB Rotor Hub & Top Platter Clamp Ring
+      const spindleRotorGroup = new THREE.Group();
+      spindleRotorGroup.position.copy(SPINDLE_POS);
+      layer4.add(spindleRotorGroup);
+      rotatingSpindleParts.push(spindleRotorGroup);
+
+      const rotorBell = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.31, 1.31, 1.58, 40),
+        machinedCncAluminumMat
+      );
+      rotorBell.position.y = 0.0;
+      spindleRotorGroup.add(rotorBell);
+
+      const topClampRing = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.62, 1.68, 0.14, 40),
+        brushedSteelMat
+      );
+      topClampRing.position.y = 0.82;
+      spindleRotorGroup.add(topClampRing);
+
+      // 6 Clamp Micro-Torx Screws on Rotor Hub
+      for (let s = 0; s < 6; s++) {
+        const a = (s / 6) * Math.PI * 2;
+        const clampScrew = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.11, 0.11, 0.06, 12),
+          darkAnodizedMat
+        );
+        clampScrew.position.set(Math.cos(a) * 1.12, 0.88, Math.sin(a) * 1.12);
+        spindleRotorGroup.add(clampScrew);
+      }
+
+      // =========================================================================
+      // LAYER 5: READ/WRITE HEADS (TMR/HAMR Sliders & Stainless Flexures)
+      // =========================================================================
+      const layer5 = layerGroups[4];
+      const headsPivotGroup = new THREE.Group();
+      headsPivotGroup.position.copy(ACTUATOR_PIVOT);
+      layer5.add(headsPivotGroup);
+      sweepingActuatorParts.push(headsPivotGroup);
+
+      // Build 10 Head Gimbal Assembly (HGA) Sliders positioned at radius L = 6.25 from pivot
+      // Along local -Z axis of the actuator arm
+      const headZLevels = [0.74, 0.61, 0.40, 0.27, 0.06, -0.07, -0.28, -0.41, -0.62, -0.75];
+      headZLevels.forEach((hy, idx) => {
+        // Thin Stainless Steel Suspension Flexure Tongue
+        const suspension = new THREE.Mesh(
+          new THREE.BoxGeometry(0.24, 0.025, 1.65),
+          brushedSteelMat
+        );
+        suspension.position.set(0, hy, -5.35);
+        headsPivotGroup.add(suspension);
+
+        // Piezoelectric PZT Dual-Stage Micro-Actuator Element (Gold/Ceramic)
+        const pztChip = new THREE.Mesh(
+          new THREE.BoxGeometry(0.20, 0.045, 0.28),
+          goldContactMat
+        );
+        pztChip.position.set(0, hy, -4.65);
+        headsPivotGroup.add(pztChip);
+
+        // AlTiC Femto Slider Body at Tip (-6.22 units from pivot)
+        const slider = new THREE.Mesh(
+          new THREE.BoxGeometry(0.18, 0.055, 0.24),
+          darkAnodizedMat
+        );
+        slider.position.set(0, hy, -6.20);
+        headsPivotGroup.add(slider);
+
+        // Glowing Nanoscale TMR/HAMR Read-Write Sensor Tip
+        const sensorTip = new THREE.Mesh(
+          new THREE.SphereGeometry(0.055, 12, 12),
+          seagateAccentMat
+        );
+        sensorTip.position.set(0, hy, -6.32);
+        headsPivotGroup.add(sensorTip);
+
+        // Outer Ramp Lift-Tab at the very tip (-6.48) that rides onto the #9 Ramp
+        const liftTab = new THREE.Mesh(
+          new THREE.BoxGeometry(0.08, 0.03, 0.28),
+          chromeMirrorMat
+        );
+        liftTab.position.set(0, hy, -6.44);
+        headsPivotGroup.add(liftTab);
+      });
+
+      // Micro-point light at the top read/write head for laser/magnetic activity visualization
+      headLaserLight = new THREE.PointLight(0x00ff66, 0.9, 3.5);
+      headLaserLight.position.set(0, 0.78, -6.25);
+      headsPivotGroup.add(headLaserLight);
+
+      // =========================================================================
+      // LAYER 6: ACTUATOR ARM (CNC-Machined Triangular Aluminum Alloy Arms)
+      // =========================================================================
+      const layer6 = layerGroups[5];
+      const armPivotGroup = new THREE.Group();
+      armPivotGroup.position.copy(ACTUATOR_PIVOT);
+      layer6.add(armPivotGroup);
+      sweepingActuatorParts.push(armPivotGroup);
+
+      // Create tapering triangular actuator arm profile with weight-relief truss cutouts
+      const armShape = new THREE.Shape();
+      armShape.moveTo(-0.78, 0);
+      armShape.lineTo(0.78, 0);
+      armShape.lineTo(0.22, -4.55);
+      armShape.lineTo(-0.22, -4.55);
+      armShape.closePath();
+
+      // Weight-reduction triangular truss hole 1
+      const hole1 = new THREE.Path();
+      hole1.moveTo(-0.42, -1.25);
+      hole1.lineTo(0.42, -1.25);
+      hole1.lineTo(0.0, -2.55);
+      hole1.closePath();
+      armShape.holes.push(hole1);
+
+      // Weight-reduction hole 2
+      const hole2 = new THREE.Path();
+      hole2.moveTo(-0.24, -2.85);
+      hole2.lineTo(0.24, -2.85);
+      hole2.lineTo(0.0, -3.95);
+      hole2.closePath();
+      armShape.holes.push(hole2);
+
+      const armExtrudeGeom = new THREE.ExtrudeGeometry(armShape, {
+        depth: 0.085,
+        bevelEnabled: true,
+        bevelSegments: 2,
+        steps: 1,
+        bevelSize: 0.015,
+        bevelThickness: 0.015
+      });
+      armExtrudeGeom.rotateX(Math.PI / 2);
+
+      const armLevels = [0.82, 0.51, 0.17, -0.17, -0.51, -0.82];
+      armLevels.forEach(ay => {
+        const armBlade = new THREE.Mesh(armExtrudeGeom, machinedCncAluminumMat);
+        armBlade.position.y = ay;
+        armPivotGroup.add(armBlade);
+      });
+
+      // =========================================================================
+      // LAYER 7: VOICE COIL MOTOR (VCM) (NdFeB Magnet Yoke + Moving Copper Coil)
+      // =========================================================================
+      const layer7 = layerGroups[6];
+
+      // 7A. Stationary High-Flux NdFeB Permanent Magnet Assembly & Nickel Return Yokes
+      const vcmYokeShape = new THREE.Shape();
+      vcmYokeShape.absarc(0, 0, 2.75, 0.18, 1.38, false);
+      vcmYokeShape.absarc(0, 0, 1.15, 1.38, 0.18, true);
+      vcmYokeShape.closePath();
+
+      const yokeGeom = new THREE.ExtrudeGeometry(vcmYokeShape, {
+        depth: 0.16,
+        bevelEnabled: true,
+        bevelSegments: 3,
+        steps: 1,
+        bevelSize: 0.04,
+        bevelThickness: 0.04
+      });
+      yokeGeom.rotateX(Math.PI / 2);
+
+      // Top and Bottom Nickel-Plated Steel Yoke Plates centered around ACTUATOR_PIVOT
+      const topYoke = new THREE.Mesh(yokeGeom, chromeMirrorMat);
+      topYoke.position.set(ACTUATOR_PIVOT.x, 0.78, ACTUATOR_PIVOT.z);
+      layer7.add(topYoke);
+
+      const bottomYoke = new THREE.Mesh(yokeGeom, chromeMirrorMat);
+      bottomYoke.position.set(ACTUATOR_PIVOT.x, -0.62, ACTUATOR_PIVOT.z);
+      layer7.add(bottomYoke);
+
+      // Sintered Neodymium Magnet Sector inside the Yoke
+      const magnetGeom = new THREE.ExtrudeGeometry(vcmYokeShape, { depth: 0.12, bevelEnabled: false });
+      magnetGeom.rotateX(Math.PI / 2);
+      const neodymiumMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.85, roughness: 0.25 });
+      const topMagnet = new THREE.Mesh(magnetGeom, neodymiumMat);
+      topMagnet.position.set(ACTUATOR_PIVOT.x, 0.58, ACTUATOR_PIVOT.z);
+      const botMagnet = new THREE.Mesh(magnetGeom, neodymiumMat);
+      botMagnet.position.set(ACTUATOR_PIVOT.x, -0.46, ACTUATOR_PIVOT.z);
+      layer7.add(topMagnet, botMagnet);
+
+      // Standoff Posts uniting Top and Bottom Yoke Plates
+      const post1 = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 1.45, 16), chromeMirrorMat);
+      post1.position.set(ACTUATOR_PIVOT.x + 2.45, 0.0, ACTUATOR_PIVOT.z + 0.55);
+      const post2 = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 1.45, 16), chromeMirrorMat);
+      post2.position.set(ACTUATOR_PIVOT.x + 0.55, 0.0, ACTUATOR_PIVOT.z + 2.45);
+      layer7.add(post1, post2);
+
+      // 7B. Moving Trapezoidal Copper Electromagnetic Voice Coil (sweeps with Actuator!)
+      const vcmCoilPivotGroup = new THREE.Group();
+      vcmCoilPivotGroup.position.copy(ACTUATOR_PIVOT);
+      layer7.add(vcmCoilPivotGroup);
+      sweepingActuatorParts.push(vcmCoilPivotGroup);
+
+      vcmPulseMat = copperCoilMat.clone();
+      const coilFork = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.95, 1.95, 0.18, 24, 1, false, -0.45, 0.9),
+        vcmPulseMat
+      );
+      coilFork.position.set(0.3, 0.0, 0.3);
+      vcmCoilPivotGroup.add(coilFork);
+
+      // Inner copper winding loop
+      const copperLoop = new THREE.Mesh(
+        new THREE.TorusGeometry(0.68, 0.11, 12, 28),
+        vcmPulseMat
+      );
+      copperLoop.rotation.x = Math.PI / 2;
+      copperLoop.position.set(0.55, 0.0, 1.65);
+      vcmCoilPivotGroup.add(copperLoop);
+
+      // =========================================================================
+      // LAYER 8: HEAD STACK ASSEMBLY (HSA) (Pivot Bearing Cartridge + FPC Preamp)
+      // =========================================================================
+      const layer8 = layerGroups[7];
+      const hsaPivotGroup = new THREE.Group();
+      hsaPivotGroup.position.copy(ACTUATOR_PIVOT);
+      layer8.add(hsaPivotGroup);
+      sweepingActuatorParts.push(hsaPivotGroup);
+
+      // Precision CNC E-Block Hub & Stainless Pivot Bearing Cartridge
+      const eBlockBarrel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.88, 0.88, 1.72, 32),
+        machinedCncAluminumMat
+      );
+      hsaPivotGroup.add(eBlockBarrel);
+
+      const bearingShaft = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.48, 0.48, 1.96, 28),
+        chromeMirrorMat
+      );
+      hsaPivotGroup.add(bearingShaft);
+
+      // Flexible Printed Circuit (FPC) Polyimide Bracket & Low-Noise Preamplifier IC
+      const fpcBracket = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 1.35, 1.45),
+        new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.4, roughness: 0.45 })
+      );
+      fpcBracket.position.set(-0.88, 0.0, -0.65);
+      fpcBracket.rotation.y = 0.22;
+      hsaPivotGroup.add(fpcBracket);
+
+      // Preamplifier Silicon IC mounted on the FPC
+      const preampChip = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.55, 0.55),
+        darkAnodizedMat
+      );
+      preampChip.position.set(-0.98, 0.1, -0.65);
+      preampChip.rotation.y = 0.22;
+      hsaPivotGroup.add(preampChip);
+
+      // =========================================================================
+      // LAYER 9: RAMP LOAD/UNLOAD MECHANISM (Outer-Diameter LCP Head Parking Cam)
+      // =========================================================================
+      const layer9 = layerGroups[8];
+      const rampGroup = new THREE.Group();
+      // Positioned right at the outer diameter edge of the platters where the actuator arc exits
+      rampGroup.position.set(-2.35, 0.0, 2.55);
+      rampGroup.rotation.y = -0.52;
+      layer9.add(rampGroup);
+
+      const lcpPolymerMat = new THREE.MeshStandardMaterial({
+        color: 0xf59e0b,
+        metalness: 0.15,
+        roughness: 0.32
+      });
+
+      // Main vertical cam block with 5 slotted platter clearance channels
+      const rampSpine = new THREE.Mesh(
+        new THREE.BoxGeometry(0.95, 1.68, 1.45),
+        lcpPolymerMat
+      );
+      rampSpine.position.set(-0.35, 0.0, 0.25);
+      rampGroup.add(rampSpine);
+
+      // Slotted guide fingers extending over the outer rim of the platters
+      const slotY = [0.76, 0.42, 0.08, -0.26, -0.60, -0.82];
+      slotY.forEach(sy => {
+        const rampFinger = new THREE.Mesh(
+          new THREE.BoxGeometry(1.55, 0.09, 0.85),
+          lcpPolymerMat
+        );
+        rampFinger.position.set(0.25, sy, -0.15);
+        rampGroup.add(rampFinger);
+      });
+
+      // Mounting boss & alignment pin
+      const rampPin = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18, 0.18, 1.78, 16),
+        chromeMirrorMat
+      );
+      rampPin.position.set(-0.55, 0.0, 0.65);
+      rampGroup.add(rampPin);
+
+      // =========================================================================
+      // LAYER 10: PRINTED CIRCUIT BOARD (PCB) (Controller SoC, DRAM, Smooth IC, SAS)
+      // =========================================================================
+      const layer10 = layerGroups[9];
+      const pcbTex = createPCBTexture();
+      const pcbShape = createRoundedRectShape(9.5, 6.8, 0.35);
+      const pcbGeom = new THREE.ExtrudeGeometry(pcbShape, {
+        depth: 0.14,
+        bevelEnabled: false
+      });
+      pcbGeom.rotateX(Math.PI / 2);
+
+      const pcbBoard = new THREE.Mesh(
+        pcbGeom,
+        new THREE.MeshStandardMaterial({
+          map: pcbTex,
+          metalness: 0.35,
+          roughness: 0.42
+        })
+      );
+      pcbBoard.position.set(0, -1.24, 3.65);
+      layer10.add(pcbBoard);
+
+      // 10A. Seagate Dual-Core Enterprise Storage Controller SoC (BGA Package + Heat Spreader)
+      const socPackage = new THREE.Mesh(
+        new THREE.BoxGeometry(1.95, 0.22, 1.95),
+        darkAnodizedMat
+      );
+      socPackage.position.set(-1.6, -1.16, 2.8);
+      const socHeatSpreader = new THREE.Mesh(
+        new THREE.BoxGeometry(1.45, 0.25, 1.45),
+        machinedCncAluminumMat
+      );
+      socHeatSpreader.position.set(-1.6, -1.15, 2.8);
+      layer10.add(socPackage, socHeatSpreader);
+
+      // 10B. 512MB DDR4 ECC DRAM Cache IC
+      const dramChip = new THREE.Mesh(
+        new THREE.BoxGeometry(1.65, 0.20, 1.15),
+        darkAnodizedMat
+      );
+      dramChip.position.set(1.3, -1.16, 2.5);
+      layer10.add(dramChip);
+
+      // 10C. Smooth VCM & Spindle Motor Driver IC
+      const motorDriverChip = new THREE.Mesh(
+        new THREE.BoxGeometry(1.45, 0.21, 1.45),
+        darkAnodizedMat
+      );
+      motorDriverChip.position.set(1.6, -1.16, 4.6);
+      layer10.add(motorDriverChip);
+
+      // 10D. 18-Pin Gold HDA Pogo Interconnect Block & SMD Capacitors
+      const hdaInterconnect = new THREE.Mesh(
+        new THREE.BoxGeometry(1.35, 0.28, 0.55),
+        goldContactMat
+      );
+      hdaInterconnect.position.set(2.9, -1.14, 1.4);
+      layer10.add(hdaInterconnect);
+
+      // 10E. Enterprise SAS / SATA Gold-Plated Edge Connector Interface at Rear (+Z = 7.15)
+      const sasConnectorHousing = new THREE.Mesh(
+        new THREE.BoxGeometry(6.2, 0.38, 0.65),
+        darkAnodizedMat
+      );
+      sasConnectorHousing.position.set(-0.5, -1.12, 7.02);
+      layer10.add(sasConnectorHousing);
+
+      for (let p = 0; p < 22; p++) {
+        const goldPin = new THREE.Mesh(
+          new THREE.BoxGeometry(0.14, 0.06, 0.58),
+          goldContactMat
+        );
+        goldPin.position.set(-3.1 + p * 0.25, -0.92, 7.05);
+        layer10.add(goldPin);
+      }
+
+      // =========================================================================
+      // LAYER 11: BASE CASTING (Die-Cast & CNC-Machined Aluminum Chassis)
+      // =========================================================================
+      const layer11 = layerGroups[10];
+
+      // Outer 3.5-inch Perimeter Chassis Walls with Machined Platter & Actuator Wells
+      const baseOuterShape = createRoundedRectShape(10.2, 14.7, 0.58);
+
+      // Circular platter shroud cutout in upper walls
+      const platterWellHole = new THREE.Path();
+      platterWellHole.absarc(0.0, -1.65, 4.78, 0, Math.PI * 2, true);
+      baseOuterShape.holes.push(platterWellHole);
+
+      const chassisWallGeom = new THREE.ExtrudeGeometry(baseOuterShape, {
+        depth: 1.95,
+        bevelEnabled: true,
+        bevelSegments: 3,
+        steps: 1,
+        bevelSize: 0.06,
+        bevelThickness: 0.06
+      });
+      chassisWallGeom.rotateX(Math.PI / 2);
+
+      const chassisWalls = new THREE.Mesh(chassisWallGeom, dieCastAluminumMat);
+      chassisWalls.position.y = 0.85;
+      layer11.add(chassisWalls);
+
+      // Solid Bottom Structural Floor Plate with Acoustic Stiffening Ribs
+      const floorShape = createRoundedRectShape(10.16, 14.66, 0.56);
+      const floorGeom = new THREE.ExtrudeGeometry(floorShape, {
+        depth: 0.24,
+        bevelEnabled: true,
+        bevelSegments: 2,
+        steps: 1,
+        bevelSize: 0.04,
+        bevelThickness: 0.04
+      });
+      floorGeom.rotateX(Math.PI / 2);
+      const chassisFloor = new THREE.Mesh(floorGeom, dieCastAluminumMat);
+      chassisFloor.position.y = -0.98;
+      layer11.add(chassisFloor);
+
+      // CNC-Machined Bright Aluminum Top Datum Lip & Bearing Bosses
+      const cncLipRing = new THREE.Mesh(
+        new THREE.RingGeometry(4.76, 5.04, 56),
+        machinedCncAluminumMat
+      );
+      cncLipRing.rotation.x = -Math.PI / 2;
+      cncLipRing.position.set(0.0, 0.92, -1.65);
+      layer11.add(cncLipRing);
+
+      // Exterior Side CNC Mounting Rails & 6 Threaded Brass/Steel Server Cage Inserts
+      const sideRailCoords = [-6.0, 0.0, 5.8];
+      sideRailCoords.forEach(rz => {
+        [-5.12, 5.12].forEach(rx => {
+          const mountBoss = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.24, 0.24, 0.12, 16),
+            chromeMirrorMat
+          );
+          mountBoss.rotation.z = Math.PI / 2;
+          mountBoss.position.set(rx, -0.25, rz);
+          layer11.add(mountBoss);
+        });
+      });
+
+      // Acoustic Stiffening Ribs along the underside of the platter well
+      for (let r = -4; r <= 4; r += 2) {
+        const rib = new THREE.Mesh(
+          new THREE.BoxGeometry(8.8, 0.14, 0.22),
+          dieCastAluminumMat
+        );
+        rib.position.set(0, -1.18, -1.65 + r * 0.85);
+        layer11.add(rib);
+      }
+    }
+
+    /**
+     * ============================================================================
+     * PART 5: SCROLL CHOREOGRAPHY, INTERACTION & CONTINUOUS MECHANICAL ANIMATION
+     * ============================================================================
+     */
+    function setupInteractionEvents(container) {
+      // 1. Scroll Listener
+      window.addEventListener('scroll', onWindowScroll, { passive: true });
+
+      // 2. Resize Listener
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // 3. Mouse Orbit Drag & Wheel Zoom
+      container.addEventListener('mousedown', (e) => {
+        state.isDragging = true;
+        state.dragStart.x = e.clientX;
+        state.dragStart.y = e.clientY;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!state.isDragging) return;
+        const dx = e.clientX - state.dragStart.x;
+        const dy = e.clientY - state.dragStart.y;
+        state.dragStart.x = e.clientX;
+        state.dragStart.y = e.clientY;
+
+        const sensitivity = state.freeOrbitMode ? 0.008 : 0.004;
+        state.userOrbitYaw -= dx * sensitivity;
+        state.userOrbitPitch = THREE.MathUtils.clamp(
+          state.userOrbitPitch + dy * sensitivity,
+          -1.15,
+          1.15
+        );
+      });
+
+      window.addEventListener('mouseup', () => {
+        state.isDragging = false;
+      });
+
+      container.addEventListener('wheel', (e) => {
+        if (state.freeOrbitMode) {
+          e.preventDefault();
+          state.userZoomOffset = THREE.MathUtils.clamp(
+            state.userZoomOffset + e.deltaY * 0.012,
+            -7.5,
+            14.0
+          );
+        }
+      }, { passive: false });
+
+      // 4. Touch Support for Mobile Orbit
+      container.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          state.isDragging = true;
+          state.dragStart.x = e.touches[0].clientX;
+          state.dragStart.y = e.touches[0].clientY;
+        }
+      }, { passive: true });
+
+      container.addEventListener('touchmove', (e) => {
+        if (!state.isDragging || e.touches.length !== 1) return;
+        const dx = e.touches[0].clientX - state.dragStart.x;
+        const dy = e.touches[0].clientY - state.dragStart.y;
+        state.dragStart.x = e.touches[0].clientX;
+        state.dragStart.y = e.touches[0].clientY;
+
+        state.userOrbitYaw -= dx * 0.005;
+        state.userOrbitPitch = THREE.MathUtils.clamp(
+          state.userOrbitPitch + dy * 0.005,
+          -0.95,
+          0.95
+        );
+      }, { passive: true });
+
+      container.addEventListener('touchend', () => {
+        state.isDragging = false;
+      });
+    }
+
+    function onWindowScroll() {
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      state.scrollProgress = THREE.MathUtils.clamp(window.scrollY / maxScroll, 0, 1);
+
+      // Determine active section (0..12) based on viewport center
+      const sections = document.querySelectorAll('main section');
+      const viewportMid = window.innerHeight * 0.48;
+      let detectedIndex = 0;
+
+      sections.forEach((sec) => {
+        const rect = sec.getBoundingClientRect();
+        if (rect.top <= viewportMid && rect.bottom >= viewportMid) {
+          detectedIndex = parseInt(sec.getAttribute('data-index'), 10);
+        }
+      });
+
+      if (detectedIndex !== state.activeSection) {
+        state.activeSection = detectedIndex;
+        updateActiveSectionUI(detectedIndex);
+      }
+
+      // Compute Scroll-Driven Target Explosion Factor:
+      // Section 0 (Hero): 0.0 -> ramps up as user enters Section 1
+      // Sections 1..11: Fully Exploded (1.0)
+      // Section 12 (Final Assembly): Smoothly reassembles back to 0.0!
+      if (!state.manualExplodeOverride) {
+        if (state.scrollProgress < 0.075) {
+          state.targetExplosion = THREE.MathUtils.smoothstep(state.scrollProgress, 0.015, 0.075);
+        } else if (state.scrollProgress > 0.90) {
+          const prevTarget = state.targetExplosion;
+          state.targetExplosion = 1.0 - THREE.MathUtils.smoothstep(state.scrollProgress, 0.90, 0.975);
+          if (prevTarget > 0.2 && state.targetExplosion <= 0.2) {
+            state.lockdownPulse = 1.0;
+          }
+        } else {
+          state.targetExplosion = 1.0;
+        }
+      }
+
+      // Slowly decay temporary user orbit offset during scroll if not in Free Orbit Mode
+      if (!state.freeOrbitMode && !state.isDragging) {
+        state.userOrbitYaw *= 0.92;
+        state.userOrbitPitch *= 0.92;
+      }
+    }
+
+    function updateActiveSectionUI(secIndex) {
+      // 1. Update Right Progress Rail Dots
+      for (let i = 0; i <= 12; i++) {
+        const dot = document.getElementById(`rail-dot-${i}`);
+        if (!dot) continue;
+        if (i === secIndex) {
+          dot.className = 'rail-dot w-3 h-3 rounded-full bg-seagate-neon shadow-[0_0_12px_#00ff66] scale-125';
+        } else if (i < secIndex) {
+          dot.className = 'rail-dot w-2 h-2 rounded-full bg-seagate-green/75';
+        } else {
+          dot.className = 'rail-dot w-2 h-2 rounded-full bg-white/25 group-hover:bg-seagate-neon';
+        }
+      }
+
+      // 2. Highlight Active Component Card (1..11)
+      for (let i = 1; i <= 11; i++) {
+        const card = document.getElementById(`card-${i}`);
+        if (!card) continue;
+        if (i === secIndex) {
+          card.classList.add('tech-panel-active');
+          card.classList.remove('opacity-90', 'translate-y-2');
+          card.classList.add('opacity-100', 'translate-y-0');
+        } else {
+          card.classList.remove('tech-panel-active', 'opacity-100', 'translate-y-0');
+          card.classList.add('opacity-90', 'translate-y-2');
+        }
+      }
+
+      // 3. Update Mobile Bottom Progress Strip
+      const mobileNum = document.getElementById('mobile-step-num');
+      const mobileTitle = document.getElementById('mobile-step-title');
+      if (secIndex === 0) {
+        mobileNum.textContent = 'HERO • 00 / 12';
+        mobileTitle.textContent = 'Seagate Exos Enterprise';
+      } else if (secIndex === 12) {
+        mobileNum.textContent = 'SEALED • 12 / 12';
+        mobileTitle.textContent = 'Precision Engineered';
+      } else {
+        const comp = HDD_COMPONENTS[secIndex - 1];
+        mobileNum.textContent = `LAYER ${comp.code} / 11`;
+        mobileTitle.textContent = comp.name;
+      }
+
+      // 4. Update 3D Callout Overlay Visibility & Text
+      const calloutOverlay = document.getElementById('callout-overlay');
+      if (secIndex >= 1 && secIndex <= 11) {
+        const comp = HDD_COMPONENTS[secIndex - 1];
+        document.getElementById('callout-tag-id').textContent = `LAYER ${comp.code}`;
+        document.getElementById('callout-tag-name').textContent = comp.name.toUpperCase();
+        calloutOverlay.classList.remove('opacity-0');
+        calloutOverlay.classList.add('opacity-100');
+      } else {
+        calloutOverlay.classList.remove('opacity-100');
+        calloutOverlay.classList.add('opacity-0');
+      }
+    }
+
+    /**
+     * Updates the 2D screen-space SVG leader line & reticle tracking the focused 3D component
+     */
+    const tempCalloutWorld = new THREE.Vector3();
+    function update3DCalloutOverlay() {
+      if (state.activeSection < 1 || state.activeSection > 11) return;
+
+      const compIndex = state.activeSection - 1;
+      const comp = HDD_COMPONENTS[compIndex];
+      const layerGrp = layerGroups[compIndex];
+      if (!layerGrp) return;
+
+      tempCalloutWorld.copy(comp.anchorLocal);
+      layerGrp.localToWorld(tempCalloutWorld);
+      tempCalloutWorld.project(camera);
+
+      // Hide callout if behind camera
+      if (tempCalloutWorld.z > 1) return;
+
+      const x = (tempCalloutWorld.x * 0.5 + 0.5) * window.innerWidth;
+      const y = (-tempCalloutWorld.y * 0.5 + 0.5) * window.innerHeight;
+
+      const anchorEl = document.getElementById('callout-anchor');
+      const tagEl = document.getElementById('callout-tag');
+      const lineEl = document.getElementById('callout-line');
+
+      anchorEl.style.left = `${x}px`;
+      anchorEl.style.top = `${y}px`;
+
+      const isSmallScreen = window.innerWidth < 768;
+      const dir = isSmallScreen ? (x < window.innerWidth * 0.5 ? 1 : -1) : (comp.side === 'left' ? 1 : -1);
+      const kneeOffset = isSmallScreen ? 20 : 36;
+      const endOffset = isSmallScreen ? 44 : 88;
+      const vertOffset = isSmallScreen ? 20 : 28;
+
+      const kneeX = x + dir * kneeOffset;
+      const kneeY = y - vertOffset;
+      const endX = x + dir * endOffset;
+      const endY = y - vertOffset;
+
+      lineEl.setAttribute('points', `${x},${y} ${kneeX},${kneeY} ${endX},${endY}`);
+      const rawLeft = dir > 0 ? (endX + 6) : (endX - tagEl.offsetWidth - 6);
+      const clampedLeft = Math.max(8, Math.min(window.innerWidth - tagEl.offsetWidth - 8, rawLeft));
+      tagEl.style.left = `${clampedLeft}px`;
+      tagEl.style.top = `${Math.max(56, endY)}px`;
+    }
+
+    /**
+     * ============================================================================
+     * PART 6: INTERACTIVE TELEMETRY & ACCESSIBILITY FUNCTIONS
+     * ============================================================================
+     */
+    function toggleMobileCardsCollapse() {
+      state.mobileCardCollapsed = !state.mobileCardCollapsed;
+      const cards = document.querySelectorAll('.mobile-telemetry-card');
+      const labels = document.querySelectorAll('.mobile-collapse-label');
+      const icons = document.querySelectorAll('.mobile-collapse-icon');
+
+      cards.forEach(c => {
+        if (state.mobileCardCollapsed) {
+          c.classList.add('is-collapsed');
+        } else {
+          c.classList.remove('is-collapsed');
+        }
+      });
+
+      labels.forEach(l => {
+        l.textContent = state.mobileCardCollapsed ? 'INFO' : 'HIDE';
+      });
+
+      icons.forEach(ic => {
+        ic.style.transform = state.mobileCardCollapsed ? 'rotate(180deg)' : 'rotate(0deg)';
+      });
+    }
+
+    function switchMobileSpecTab(compId, activeKey) {
+      const keys = ['func', 'spec', 'mfg'];
+      keys.forEach(k => {
+        const panel = document.getElementById(`tab-panel-${compId}-${k}`);
+        const btn = document.getElementById(`tab-btn-${compId}-${k}`);
+        if (!panel || !btn) return;
+
+        if (k === activeKey) {
+          panel.classList.remove('hidden');
+          btn.className = 'py-1 px-1.5 rounded bg-seagate-green/25 text-seagate-neon border border-seagate-green/40 font-medium truncate';
+        } else {
+          panel.classList.add('hidden');
+          btn.className = 'py-1 px-1.5 rounded text-slate-400 hover:text-white border border-transparent truncate';
+        }
+      });
+    }
+
+    function scrollToSection(index) {
+      const clamped = Math.max(0, Math.min(12, index));
+      const targetEl = document.getElementById(`section-${clamped}`);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: state.reducedMotion ? 'auto' : 'smooth' });
+      }
+    }
+
+    function stepSection(delta) {
+      scrollToSection(state.activeSection + delta);
+    }
+
+    function toggleFreeOrbitMode() {
+      state.freeOrbitMode = !state.freeOrbitMode;
+      const btn = document.getElementById('btn-free-orbit');
+      const label = document.getElementById('free-orbit-label');
+      const banner = document.getElementById('free-orbit-banner');
+
+      if (state.freeOrbitMode) {
+        btn.classList.add('tech-panel-active');
+        label.textContent = '360° INSPECT: ON';
+        banner.classList.remove('hidden');
+        banner.classList.add('flex');
+      } else {
+        btn.classList.remove('tech-panel-active');
+        label.textContent = '360° INSPECT: OFF';
+        banner.classList.add('hidden');
+        banner.classList.remove('flex');
+        state.userOrbitYaw = 0;
+        state.userOrbitPitch = 0;
+        state.userZoomOffset = 0;
+      }
+    }
+
+    function cycleRpmMode() {
+      state.rpmMode = (state.rpmMode + 1) % 3;
+      const btnLabel = document.getElementById('rpm-btn-label');
+      const hudRpm = document.getElementById('hud-rpm-readout');
+
+      if (state.rpmMode === 0) {
+        btnLabel.textContent = '7.2K RPM';
+        hudRpm.textContent = '7,200 RPM';
+      } else if (state.rpmMode === 1) {
+        btnLabel.textContent = 'SLOW-MO';
+        hudRpm.textContent = '60 RPM (MACRO)';
+      } else {
+        btnLabel.textContent = 'PAUSED';
+        hudRpm.textContent = '0 RPM (PAUSED)';
+      }
+    }
+
+    function toggleLabDrawer() {
+      const drawer = document.getElementById('lab-drawer');
+      drawer.classList.toggle('hidden');
+    }
+
+    function onManualExplodeInput(val) {
+      state.manualExplodeOverride = true;
+      state.manualExplodeValue = parseFloat(val) / 100;
+      state.targetExplosion = state.manualExplodeValue;
+      document.getElementById('drawer-explode-val').textContent = `${val}% MANUAL`;
+    }
+
+    function resetExplodeToScroll() {
+      state.manualExplodeOverride = false;
+      document.getElementById('drawer-explode-val').textContent = 'SCROLL SYNC';
+      onWindowScroll();
+    }
+
+    function toggleStrobeTracks() {
+      state.strobeEnabled = !state.strobeEnabled;
+      platterTopMat.map = state.strobeEnabled ? platterStrobeTexture : platterStandardTexture;
+      platterTopMat.needsUpdate = true;
+
+      const btn = document.getElementById('toggle-strobe-btn');
+      if (state.strobeEnabled) {
+        btn.textContent = 'ACTIVE';
+        btn.className = 'px-2.5 py-1 rounded text-[10px] font-mono uppercase border border-seagate-green/50 bg-seagate-green/20 text-seagate-neon';
+      } else {
+        btn.textContent = 'MIRROR';
+        btn.className = 'px-2.5 py-1 rounded text-[10px] font-mono uppercase border border-white/15 bg-white/5 text-slate-300';
+      }
+    }
+
+    function toggleHeadPark() {
+      state.headsParked = !state.headsParked;
+      const btn = document.getElementById('toggle-park-btn');
+      const hudSeek = document.getElementById('hud-seek-readout');
+
+      if (state.headsParked) {
+        // Angle 0.79 rad parks the sliders directly onto the #9 Outer-Diameter LCP Ramp!
+        state.targetActuatorAngle = 0.79;
+        btn.textContent = 'PARKED ON RAMP';
+        btn.className = 'px-2.5 py-1 rounded text-[10px] font-mono uppercase border border-amber-400/50 bg-amber-400/20 text-amber-200';
+        hudSeek.textContent = 'HEADS PARKED (RAMP)';
+      } else {
+        state.targetActuatorAngle = 0.42;
+        btn.textContent = 'SEEKING';
+        btn.className = 'px-2.5 py-1 rounded text-[10px] font-mono uppercase border border-white/15 bg-white/5 text-slate-300';
+        hudSeek.textContent = '4.16ms ACTIVE SEEK';
+      }
+    }
+
+    function toggleReducedMotion() {
+      state.reducedMotion = !state.reducedMotion;
+      const btn = document.getElementById('toggle-motion-btn');
+      if (state.reducedMotion) {
+        btn.textContent = 'ON';
+        btn.className = 'px-2.5 py-1 rounded text-[10px] font-mono uppercase border border-seagate-green/50 bg-seagate-green/20 text-seagate-neon';
+      } else {
+        btn.textContent = 'OFF';
+        btn.className = 'px-2.5 py-1 rounded text-[10px] font-mono uppercase border border-white/15 bg-white/5 text-slate-300';
+      }
+    }
+
+    function triggerComponentAction(compId) {
+      state.focusedActionLayer = compId;
+      state.actionPulseTimer = 1.0;
+
+      if (compId === 1) {
+        state.lockdownPulse = 1.0;
+      } else if (compId === 3) {
+        toggleStrobeTracks();
+      } else if (compId === 4) {
+        cycleRpmMode();
+      } else if (compId === 6) {
+        // High-G seek burst across platter tracks
+        state.headsParked = false;
+        state.targetActuatorAngle = (state.targetActuatorAngle > 0.48) ? 0.28 : 0.66;
+      } else if (compId === 9) {
+        toggleHeadPark();
+      }
+    }
+
+    function triggerLockdownReplay() {
+      state.manualExplodeOverride = false;
+      state.explosionFactor = 0.65;
+      state.targetExplosion = 0.0;
+      state.lockdownPulse = 1.0;
+    }
+
+    /**
+     * ============================================================================
+     * PART 7: 60 FPS RENDER & KINEMATICS LOOP
+     * ============================================================================
+     */
+    let lastTime = performance.now();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+
+      // 1. Smoothly Interpolate Explosion Factor
+      const dampSpeed = state.reducedMotion ? 8.0 : 4.8;
+      state.explosionFactor = THREE.MathUtils.lerp(
+        state.explosionFactor,
+        state.targetExplosion,
+        1 - Math.exp(-dampSpeed * dt)
+      );
+
+      // Update Top HUD & Slider Readout
+      const pct = Math.round(state.explosionFactor * 100);
+      document.getElementById('hud-explode-pct').textContent = `${pct}%`;
+      if (!state.manualExplodeOverride) {
+        document.getElementById('manual-explode-slider').value = pct;
+      }
+
+      // 2. Position All 11 Layers Along the Vertical Axis + Inspection Cushion
+      for (let i = 0; i < 11; i++) {
+        const comp = HDD_COMPONENTS[i];
+        let targetY = comp.explodedY * state.explosionFactor;
+
+        // Add extra inspection separation cushion around the currently focused component (1..11)
+        if (state.activeSection >= 1 && state.activeSection <= 11 && state.explosionFactor > 0.35) {
+          const activeIdx = state.activeSection - 1;
+          if (i < activeIdx) {
+            targetY += 1.55 * state.explosionFactor;
+          } else if (i > activeIdx) {
+            targetY -= 1.55 * state.explosionFactor;
+          }
+        }
+
+        layerGroups[i].position.y = THREE.MathUtils.lerp(
+          layerGroups[i].position.y,
+          targetY,
+          1 - Math.exp(-7.5 * dt)
+        );
+      }
+
+      // 3. Animate Top Cover Torx Bolts Unscrewing / Mechanical Locking
+      if (state.lockdownPulse > 0) {
+        state.lockdownPulse = Math.max(0, state.lockdownPulse - dt * 1.1);
+      }
+      const boltLift = state.explosionFactor * 0.85 + Math.sin(state.lockdownPulse * Math.PI) * 0.45;
+      topCoverBolts.forEach((bolt, idx) => {
+        bolt.position.y = 1.15 + boltLift;
+        bolt.rotation.y = boltLift * 8.0 + idx * 0.5;
+      });
+
+      // 4. Continuous Spindle & Platter High-RPM Rotation
+      let angularVel = 24.0; // 7,200 RPM visual representation
+      if (state.rpmMode === 1 || state.reducedMotion) angularVel = 2.2; // 60 RPM Slow-Mo Macro
+      if (state.rpmMode === 2) angularVel = 0.0; // Paused
+      if (state.headsParked && state.rpmMode !== 2) angularVel = 0.4; // Idle spin-down
+
+      state.platterAngle += angularVel * dt;
+      rotatingSpindleParts.forEach(part => {
+        part.rotation.y = state.platterAngle;
+      });
+
+      // 5. Continuous Precision Actuator Arm, HSA, VCM Coil & Read/Write Head Seeking
+      if (!state.headsParked) {
+        state.seekTimer -= dt;
+        if (state.seekTimer <= 0) {
+          // Authentic track radii between ID (0.28 rad) and OD (0.67 rad)
+          state.targetActuatorAngle = 0.28 + Math.random() * 0.39;
+          state.seekTimer = state.reducedMotion ? 1.8 : (0.18 + Math.random() * 0.55);
+        }
+      }
+
+      const seekStiffness = state.reducedMotion ? 5.0 : 18.0;
+      state.actuatorAngle = THREE.MathUtils.lerp(
+        state.actuatorAngle,
+        state.targetActuatorAngle,
+        1 - Math.exp(-seekStiffness * dt)
+      );
+
+      sweepingActuatorParts.forEach(part => {
+        part.rotation.y = state.actuatorAngle;
+      });
+
+      // 6. Subtle Interactive Component Pulse Feedback
+      if (state.actionPulseTimer > 0) {
+        state.actionPulseTimer = Math.max(0, state.actionPulseTimer - dt * 1.4);
+        const pulse = Math.sin(state.actionPulseTimer * Math.PI * 4) * 0.5 + 0.5;
+        if (headLaserLight) headLaserLight.intensity = 0.9 + pulse * 3.5;
+        if (vcmPulseMat) {
+          vcmPulseMat.emissive = new THREE.Color(0x00ff66);
+          vcmPulseMat.emissiveIntensity = pulse * 0.65;
+        }
+        if (gasketMat) gasketMat.emissiveIntensity = 0.08 + pulse * 0.65;
+      } else {
+        if (headLaserLight) headLaserLight.intensity = 0.9;
+        if (vcmPulseMat) vcmPulseMat.emissiveIntensity = 0.0;
+        if (gasketMat) gasketMat.emissiveIntensity = 0.06 + Math.sin(now * 0.003) * 0.04;
+      }
+
+      // 7. Whole-Drive Cinematic Rotation in Hero (Section 0) & Final Assembly (Section 12)
+      const isMobile = window.innerWidth < 1024;
+      if (state.activeSection === 0) {
+        const rotRate = state.reducedMotion ? 0.06 : 0.22;
+        hddRootGroup.rotation.y = THREE.MathUtils.lerp(
+          hddRootGroup.rotation.y,
+          Math.sin(now * 0.0005 * rotRate * 4) * 0.55 + state.userOrbitYaw,
+          0.08
+        );
+        hddRootGroup.rotation.x = THREE.MathUtils.lerp(
+          hddRootGroup.rotation.x,
+          0.26 + state.userOrbitPitch * 0.5,
+          0.08
+        );
+        hddRootGroup.rotation.z = THREE.MathUtils.lerp(
+          hddRootGroup.rotation.z,
+          -0.14,
+          0.08
+        );
+
+        desiredCamPos.set(9.5, 11.2, 14.2);
+        desiredCamTarget.set(0.0, -0.4, 0.0);
+      } else if (state.activeSection === 12) {
+        const rotRate = state.reducedMotion ? 0.08 : 0.32;
+        hddRootGroup.rotation.y += dt * rotRate;
+        hddRootGroup.rotation.x = THREE.MathUtils.lerp(hddRootGroup.rotation.x, 0.35, 0.08);
+        hddRootGroup.rotation.z = THREE.MathUtils.lerp(hddRootGroup.rotation.z, -0.12, 0.08);
+
+        desiredCamPos.set(0.0, 11.8, 15.6);
+        desiredCamTarget.set(0.0, -0.5, 0.0);
+      } else {
+        // Sections 1..11: Align drive cleanly so vertical disassembly and macro camera shine
+        hddRootGroup.rotation.y = THREE.MathUtils.lerp(hddRootGroup.rotation.y, 0.0, 0.1);
+        hddRootGroup.rotation.x = THREE.MathUtils.lerp(hddRootGroup.rotation.x, 0.0, 0.1);
+        hddRootGroup.rotation.z = THREE.MathUtils.lerp(hddRootGroup.rotation.z, 0.0, 0.1);
+
+        const comp = HDD_COMPONENTS[state.activeSection - 1];
+        desiredCamPos.copy(comp.camPos);
+        desiredCamTarget.copy(comp.camTarget);
+
+        // Mobile 3D Camera Offset (< 768px): frame the focused 3D component cleanly in the upper 55%-60% of the mobile viewport
+        const isSmallMobile = window.innerWidth < 768;
+        if (isSmallMobile) {
+          desiredCamPos.x *= 0.52;
+          desiredCamPos.y += 0.85;
+          desiredCamPos.z += 5.2;
+          desiredCamTarget.x = 0.0;
+          // Shift camera lookAt target downward when the bottom telemetry drawer is expanded so the 3D part rises into the upper viewport
+          const verticalLiftOffset = state.mobileCardCollapsed ? 0.45 : 2.35;
+          desiredCamTarget.y = comp.explodedY - verticalLiftOffset;
+          desiredCamTarget.z *= 0.5;
+        } else if (isMobile) {
+          desiredCamPos.x *= 0.65;
+          desiredCamPos.z += 3.8;
+          desiredCamTarget.x = 0.0;
+          desiredCamTarget.y -= 1.4;
+        }
+      }
+
+      // Apply User Drag Orbit & Zoom Offset
+      if (state.activeSection >= 1 && state.activeSection <= 11 || state.freeOrbitMode) {
+        const offsetVec = desiredCamPos.clone().sub(desiredCamTarget);
+        const spherical = new THREE.Spherical().setFromVector3(offsetVec);
+        spherical.theta += state.userOrbitYaw;
+        spherical.phi = THREE.MathUtils.clamp(spherical.phi - state.userOrbitPitch, 0.18, Math.PI - 0.18);
+        spherical.radius = Math.max(4.5, spherical.radius + state.userZoomOffset);
+        offsetVec.setFromSpherical(spherical);
+        desiredCamPos.copy(desiredCamTarget).add(offsetVec);
+      }
+
+      // Smooth Camera Interpolation
+      const camLerp = state.reducedMotion ? 0.14 : 0.065;
+      currentCamPos.lerp(desiredCamPos, camLerp);
+      currentCamTarget.lerp(desiredCamTarget, camLerp);
+
+      camera.position.copy(currentCamPos);
+      camera.lookAt(currentCamTarget);
+
+      // Update 2D SVG Callout Pin Tracking
+      update3DCalloutOverlay();
+
+      renderer.render(scene, camera);
+    }
+
+    /**
+     * ============================================================================
+     * PART 8: INITIALIZATION ON WINDOW LOAD
+     * ============================================================================
+     */
+    window.onload = function () {
+      buildDOMSections();
+      initThreeEngine();
+      onWindowScroll();
+      updateActiveSectionUI(0);
+      requestAnimationFrame(animate);
+    };
+  </script>
+</body>
+</html>
